@@ -9,25 +9,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.misi_budaya.ui.theme.MisibudayaTheme
+import com.example.misi_budaya.ui.login.*
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), LoginContract.View {
+
+    private lateinit var presenter: LoginPresenter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        presenter = LoginPresenter(this)
+
         setContent {
-//            MisibudayaTheme {
-//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    Greeting(
-//                        name = "Android",
-//                        modifier = Modifier.padding(innerPadding)
-//                    )
-//                }
-                LoginScreen(presenter = com.example.misi_budaya.ui.login.LoginPresenter(object : com.example.misi_budaya.ui.login.LoginContract.View {
-                    override fun showLoginSuccess(username: String) {}
-                    override fun showLoginError(message: String) {}
-                }))
-            }
+            LoginScreen(presenter)
         }
     }
+
+    override fun showLoginSuccess() {
+        println("✅ Login berhasil!")
+    }
+
+    override fun showLoginError(message: String) {
+        println("❌ Login gagal: $message")
+    }
+}
+
 
 
 @Composable
