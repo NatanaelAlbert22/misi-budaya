@@ -11,10 +11,16 @@ import com.example.misi_budaya.ui.home.HomeScreen
 import com.example.misi_budaya.ui.login.LoginScreen
 import com.example.misi_budaya.ui.signup.SignUpScreen
 import com.example.misi_budaya.ui.theme.MisibudayaTheme
+import com.example.misi_budaya.ui.login.*
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), LoginContract.View {
+
+    private lateinit var presenter: LoginPresenter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        presenter = LoginPresenter(this)
+
         setContent {
             MisibudayaTheme {
                 MyApp()
