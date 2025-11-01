@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.misi_budaya.ui.home.HomeScreen
 import com.example.misi_budaya.ui.login.LoginScreen
+import com.example.misi_budaya.ui.main.MainScreen
 import com.example.misi_budaya.ui.signup.SignUpScreen
 import com.example.misi_budaya.ui.theme.MisibudayaTheme
 
@@ -34,7 +34,7 @@ fun MyApp() {
             SignUpScreen(navController = navController)
         }
         composable("home") {
-            HomeScreen()
+            MainScreen(rootNavController = navController)
         }
     }
 }
