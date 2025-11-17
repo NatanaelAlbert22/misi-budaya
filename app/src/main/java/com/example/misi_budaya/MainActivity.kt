@@ -1,6 +1,8 @@
 package com.example.misi_budaya
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
@@ -26,6 +28,30 @@ class MainActivity : ComponentActivity(), LoginContract.View {
                 MyApp()
             }
         }
+    }
+
+    override fun showLoading() {
+        // Ditangani di dalam Composable
+    }
+
+    override fun hideLoading() {
+        // Ditangani di dalam Composable
+    }
+
+    override fun showMessage(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    override fun navigateToHome() {
+        // Navigasi ditangani oleh NavController di MyApp
+    }
+
+    override fun navigateToSignUp() {
+        // Navigasi ditangani oleh NavController di MyApp
+    }
+
+    override fun launchGoogleSignIn(intent: Intent) {
+        // TODO: Implementasikan dengan ActivityResultLauncher
     }
 }
 

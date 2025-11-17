@@ -21,11 +21,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.model.Soal
 import com.example.misi_budaya.data.repository.QuizRepository
 
@@ -38,7 +41,11 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val (selectedOption, onOptionSelected) = remember { mutableStateOf<String?>(null) }
 
-    val presenter = remember { QuestionPresenter(QuizRepository()) }
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val repository = remember { QuizRepository(db.quizPackageDao()) }
+    val scope = rememberCoroutineScope()
+    val presenter = remember { QuestionPresenter(repository, scope) }
 
     val view = remember(navController) {
         object : QuestionContract.View {
@@ -57,8 +64,10 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
             }
 
             override fun navigateToResult(score: Int) {
+                // Navigate to the ResultScreen, replacing the current screen
+                // so the user can't go back to the last question.
                 navController.navigate("result_screen/$score") {
-                    popUpTo("quiz_screen") { inclusive = false }
+                    popUpTo(navController.currentDestination?.id ?: 0) { inclusive = true }
                 }
             }
 
@@ -71,11 +80,11 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
         }
     }
 
-    // Attach/detach and load questions
     DisposableEffect(presenter) {
         presenter.onAttach(view)
         onDispose { presenter.onDetach() }
     }
+
     LaunchedEffect(quizPackId) {
         if (quizPackId != null) {
             presenter.loadQuestions(quizPackId)

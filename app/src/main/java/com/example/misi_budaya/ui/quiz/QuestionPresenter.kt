@@ -2,13 +2,16 @@ package com.example.misi_budaya.ui.quiz
 
 import com.example.misi_budaya.data.model.Soal
 import com.example.misi_budaya.data.repository.QuizRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-class QuestionPresenter(private val repository: QuizRepository) : QuestionContract.Presenter {
+class QuestionPresenter(private val repository: QuizRepository, private val scope: CoroutineScope) : QuestionContract.Presenter {
 
     private var view: QuestionContract.View? = null
     private var soalList: List<Soal> = emptyList()
     private var currentQuestionIndex = 0
     private var userAnswers: MutableMap<String, String> = mutableMapOf()
+    private var quizPackName: String? = null // Store the name of the quiz pack
 
     override fun onAttach(view: QuestionContract.View) {
         this.view = view
@@ -19,6 +22,7 @@ class QuestionPresenter(private val repository: QuizRepository) : QuestionContra
     }
 
     override fun loadQuestions(paketId: String) {
+        this.quizPackName = paketId // Save the name for later
         view?.showLoading()
         repository.getSoalList(paketId) { result ->
             view?.hideLoading()
@@ -46,11 +50,9 @@ class QuestionPresenter(private val repository: QuizRepository) : QuestionContra
 
     override fun onNextOrFinishClicked() {
         if (currentQuestionIndex < soalList.size - 1) {
-            // Go to the next question
             currentQuestionIndex++
             showCurrentQuestion()
         } else {
-            // Finish the quiz and calculate score
             finishQuiz()
         }
     }
@@ -68,6 +70,14 @@ class QuestionPresenter(private val repository: QuizRepository) : QuestionContra
             }
         }
         val score = if (soalList.isNotEmpty()) (correctAnswers * 100) / soalList.size else 0
-        view?.navigateToResult(score)
+
+        // Save the score, and only navigate AFTER the save is complete.
+        quizPackName?.let { name ->
+            scope.launch {
+                repository.updateQuizScore(name, score)
+                // Now that the score is saved, navigate back.
+                view?.navigateToResult(score)
+            }
+        }
     }
 }
