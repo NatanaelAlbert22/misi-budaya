@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,21 +21,28 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.misi_budaya.data.model.Paket
+import com.example.misi_budaya.data.local.AppDatabase
+import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
 
 @Composable
 fun QuizScreen(navController: NavController) {
-    var isLoading by remember { mutableStateOf(false) }
-    var quizPacks by remember { mutableStateOf<List<Paket>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) } // Start with loading
+    var quizPacks by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val presenter = remember { QuizPresenter(QuizRepository()) }
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val repository = remember { QuizRepository(db.quizPackageDao()) }
+    val scope = rememberCoroutineScope()
+    val presenter = remember { QuizPresenter(repository, scope) }
 
     val view = remember(navController) {
         object : QuizContract.View {
@@ -46,13 +54,16 @@ fun QuizScreen(navController: NavController) {
                 isLoading = false
             }
 
-            override fun showQuizPacks(paketList: List<Paket>) {
+            override fun showQuizPacks(paketList: List<QuizPackage>) {
                 quizPacks = paketList
                 errorMessage = null
             }
 
             override fun showError(message: String) {
-                errorMessage = message
+                // Avoid overwriting a valid list with a transient error
+                if (quizPacks.isEmpty()) {
+                    errorMessage = message
+                }
             }
 
             override fun navigateToQuestions(paketId: String) {
@@ -76,10 +87,12 @@ fun QuizScreen(navController: NavController) {
             Text("Pilih Paket Soal", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoading) {
+            if (isLoading && quizPacks.isEmpty()) { // Show loading only if there's no data yet
                 CircularProgressIndicator()
             } else if (errorMessage != null) {
                 Text(text = errorMessage!!)
+            } else if (quizPacks.isEmpty()) {
+                Text("Tidak ada paket soal yang tersedia.")
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(quizPacks) { pack ->
@@ -92,14 +105,17 @@ fun QuizScreen(navController: NavController) {
 }
 
 @Composable
-private fun QuizPackItem(pack: Paket, onClick: () -> Unit) {
+private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(pack.namaPaket, style = MaterialTheme.typography.titleLarge)
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(pack.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            if (pack.isCompleted) {
+                Text(pack.score.toString(), style = MaterialTheme.typography.headlineSmall)
+            }
         }
     }
 }
