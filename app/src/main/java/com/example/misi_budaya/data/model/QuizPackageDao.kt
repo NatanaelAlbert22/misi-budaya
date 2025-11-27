@@ -13,6 +13,9 @@ interface QuizPackageDao {
     @Query("SELECT * FROM quiz_packages")
     fun getAllQuizPackages(): Flow<List<QuizPackage>>
 
+    @Query("SELECT * FROM quiz_packages")
+    suspend fun getAllQuizPackagesSync(): List<QuizPackage>
+
     @Query("SELECT * FROM quiz_packages WHERE name = :name")
     suspend fun getQuizPackageByName(name: String): QuizPackage?
 
@@ -23,5 +26,5 @@ interface QuizPackageDao {
     suspend fun updateQuizPackage(quizPackage: QuizPackage)
 
     @Delete
-    suspend fun delete(quizPackage: QuizPackage)
+    suspend fun deleteQuizPackage(quizPackage: QuizPackage)
 }

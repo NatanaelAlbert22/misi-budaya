@@ -1,26 +1,52 @@
 {
   "project_info": {
-    "project_number": "821871222026",
-    "project_id": "misi-budaya",
-    "storage_bucket": "misi-budaya.firebasestorage.app"
+    "project_number": "310286844480",
+    "project_id": "mobile-d5b90",
+    "storage_bucket": "mobile-d5b90.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:821871222026:android:baac8ed03e5b460dea6ef3",
+        "mobilesdk_app_id": "1:310286844480:android:ecf87c9c38fedda59bd5a5",
         "android_client_info": {
           "package_name": "com.example.misi_budaya"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "310286844480-a4v3mlk7mdtumtjanvrh04hese6ithqt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.misi_budaya",
+            "certificate_hash": "0972f870bdedac2b4e11d237f7780207660eea0d"
+          }
+        },
+        {
+          "client_id": "310286844480-sv2sicvv09orep8frpdpg4o1168sk11j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.misi_budaya",
+            "certificate_hash": "169e8f602e8949fc137be8cad75de550bccc21eb"
+          }
+        },
+        {
+          "client_id": "310286844480-68d6e2pr6ntl8qeb24scme0sml099gf1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDKMs9JJ0horoJ_Ju4_zxzYz24-YrkBjsQ"
+          "current_key": "AIzaSyABixb0ZwKIKPrIQ1W-Ru9qU17fN2zBd7M"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "310286844480-68d6e2pr6ntl8qeb24scme0sml099gf1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.misi_budaya.ui.login.LoginScreen
 import com.example.misi_budaya.ui.main.MainScreen
 import com.example.misi_budaya.ui.signup.SignUpScreen
+import com.example.misi_budaya.ui.splash.SplashScreen
 import com.example.misi_budaya.ui.theme.MisibudayaTheme
 import com.example.misi_budaya.ui.login.*
 
@@ -58,7 +59,10 @@ class MainActivity : ComponentActivity(), LoginContract.View {
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "login") {
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash") {
+            SplashScreen(navController = navController)
+        }
         composable("login") {
             LoginScreen(navController = navController)
         }

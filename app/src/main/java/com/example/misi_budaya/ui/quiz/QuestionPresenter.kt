@@ -1,9 +1,12 @@
 package com.example.misi_budaya.ui.quiz
 
+import android.util.Log
 import com.example.misi_budaya.data.model.Soal
 import com.example.misi_budaya.data.repository.QuizRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class QuestionPresenter(private val repository: QuizRepository, private val scope: CoroutineScope) : QuestionContract.Presenter {
 
@@ -24,19 +27,36 @@ class QuestionPresenter(private val repository: QuizRepository, private val scop
     override fun loadQuestions(paketId: String) {
         this.quizPackName = paketId // Save the name for later
         view?.showLoading()
-        repository.getSoalList(paketId) { result ->
-            view?.hideLoading()
-            result.onSuccess {
-                soalList = it
-                if (soalList.isNotEmpty()) {
-                    currentQuestionIndex = 0
-                    userAnswers.clear()
-                    showCurrentQuestion()
-                } else {
-                    view?.showError("No questions found for this pack.")
+        
+        // COROUTINE: Launch di scope yang di-bind ke lifecycle
+        scope.launch {
+            try {
+                // getSoalList sekarang suspend function, jadi bisa langsung di-call
+                // tanpa callback. Lebih clean dan mudah di-maintain!
+                val questions = repository.getSoalList(paketId)
+                
+                // withContext(Dispatchers.Main) untuk update UI di main thread
+                withContext(Dispatchers.Main) {
+                    view?.hideLoading()
+                    
+                    if (questions.isNotEmpty()) {
+                        soalList = questions
+                        currentQuestionIndex = 0
+                        userAnswers.clear()
+                        showCurrentQuestion()
+                        Log.d("QuestionPresenter", "Loaded ${questions.size} questions")
+                    } else {
+                        view?.showError("Tidak ada soal untuk paket ini.")
+                        Log.w("QuestionPresenter", "No questions found for paketId: $paketId")
+                    }
                 }
-            }.onFailure {
-                view?.showError(it.message ?: "Failed to load questions.")
+            } catch (e: Exception) {
+                // Error handling dengan coroutine lebih mudah dengan try-catch
+                withContext(Dispatchers.Main) {
+                    view?.hideLoading()
+                    view?.showError(e.message ?: "Gagal memuat soal.")
+                    Log.e("QuestionPresenter", "Error loading questions", e)
+                }
             }
         }
     }
@@ -71,12 +91,25 @@ class QuestionPresenter(private val repository: QuizRepository, private val scop
         }
         val score = if (soalList.isNotEmpty()) (correctAnswers * 100) / soalList.size else 0
 
-        // Save the score, and only navigate AFTER the save is complete.
+        // COROUTINE: Save score di background, lalu navigate di main thread
         quizPackName?.let { name ->
             scope.launch {
-                repository.updateQuizScore(name, score)
-                // Now that the score is saved, navigate back.
-                view?.navigateToResult(score)
+                try {
+                    // updateQuizScore sudah menggunakan withContext(Dispatchers.IO)
+                    repository.updateQuizScore(name, score)
+                    Log.d("QuestionPresenter", "Score saved: $score for $name")
+                    
+                    // Navigate setelah score berhasil disimpan
+                    withContext(Dispatchers.Main) {
+                        view?.navigateToResult(score)
+                    }
+                } catch (e: Exception) {
+                    Log.e("QuestionPresenter", "Error saving score", e)
+                    // Tetap navigate meskipun gagal save score
+                    withContext(Dispatchers.Main) {
+                        view?.navigateToResult(score)
+                    }
+                }
             }
         }
     }

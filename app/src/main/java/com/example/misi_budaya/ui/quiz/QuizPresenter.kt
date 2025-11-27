@@ -1,12 +1,17 @@
 package com.example.misi_budaya.ui.quiz
 
+import android.util.Log
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class QuizPresenter(private val repository: QuizRepository, private val scope: CoroutineScope) : QuizContract.Presenter {
 
@@ -24,6 +29,8 @@ class QuizPresenter(private val repository: QuizRepository, private val scope: C
     override fun loadQuizPacks() {
         view?.showLoading()
 
+        // COROUTINE #1: Mengambil data lokal menggunakan Flow (reactive)
+        // Flow akan otomatis update UI ketika database berubah
         repository.getPaketList()
             .onEach { quizPackages ->
                 view?.hideLoading()
@@ -32,17 +39,54 @@ class QuizPresenter(private val repository: QuizRepository, private val scope: C
                 }
             }
             .catch { e ->
+                Log.e("QuizPresenter", "Error loading local data", e)
                 view?.hideLoading()
-                view?.showError(e.message ?: "Failed to load quiz packs from local source.")
+                view?.showError(e.message ?: "Gagal memuat data lokal.")
             }
-            .launchIn(scope)
+            .launchIn(scope) // Launch di scope yang sudah di-bind ke lifecycle
 
+        // COROUTINE #2: Refresh data dari Firebase dengan retry & timeout
         scope.launch {
             try {
-                repository.refreshPaketList()
+                // withContext(Dispatchers.IO) memastikan operasi berjalan di background thread
+                withContext(Dispatchers.IO) {
+                    // Retry mechanism: Coba 3 kali jika gagal
+                    var retryCount = 0
+                    val maxRetries = 3
+                    var lastException: Exception? = null
+                    var success = false
+
+                    while (retryCount < maxRetries && !success) {
+                        try {
+                            // withTimeout: Batalkan jika lebih dari 30 detik
+                            withTimeout(30_000L) {
+                                Log.d("QuizPresenter", "Refreshing from Firebase (attempt ${retryCount + 1})")
+                                repository.refreshPaketList()
+                            }
+                            success = true // Sukses, keluar dari retry loop
+                        } catch (e: Exception) {
+                            lastException = e
+                            retryCount++
+                            if (retryCount < maxRetries) {
+                                Log.w("QuizPresenter", "Retry $retryCount after error: ${e.message}")
+                                delay(2000L * retryCount) // Exponential backoff: 2s, 4s, 6s
+                            }
+                        }
+                    }
+
+                    // Jika semua retry gagal, throw exception terakhir
+                    if (!success) {
+                        throw lastException ?: Exception("Unknown error")
+                    }
+                }
             } catch (e: Exception) {
-                view?.hideLoading()
-                view?.showError(e.message ?: "Failed to refresh quiz packs from remote source.")
+                // withContext(Dispatchers.Main) untuk update UI di main thread
+                withContext(Dispatchers.Main) {
+                    Log.e("QuizPresenter", "Failed to refresh from Firebase after retries", e)
+                    view?.hideLoading()
+                    // Tidak show error jika data lokal sudah ada
+                    // view?.showError(e.message ?: "Gagal refresh dari server.")
+                }
             }
         }
     }

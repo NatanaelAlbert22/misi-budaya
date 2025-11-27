@@ -47,28 +47,37 @@ val bottomNavItems = listOf(
 @Composable
 fun MainScreen(rootNavController: NavController) {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    
+    // Daftar route yang tidak menampilkan bottom bar
+    val routesWithoutBottomBar = listOf("question_screen/{quizPackId}", "result_screen/{score}")
+    val shouldShowBottomBar = routesWithoutBottomBar.none { route ->
+        currentRoute?.startsWith(route.split("/").first()) == true
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            if (shouldShowBottomBar) {
+                NavigationBar {
+                    val currentDestination = navBackStackEntry?.destination
 
-                bottomNavItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                    bottomNavItems.forEach { item ->
+                        NavigationBarItem(
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
+                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -78,7 +87,7 @@ fun MainScreen(rootNavController: NavController) {
             startDestination = "home_screen",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home_screen") { HomeScreen() }
+            composable("home_screen") { HomeScreen(navController = navController) }
             composable("quiz_screen") { QuizScreen(navController = navController) }
             composable("leaderboard_screen") { LeaderboardScreen() }
             composable("profile_screen") { ProfileScreen(rootNavController = rootNavController) }

@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -32,9 +37,11 @@ import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun QuizScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) } // Start with loading
+    var isRefreshing by remember { mutableStateOf(false) }
     var quizPacks by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -48,10 +55,12 @@ fun QuizScreen(navController: NavController) {
         object : QuizContract.View {
             override fun showLoading() {
                 isLoading = true
+                isRefreshing = false
             }
 
             override fun hideLoading() {
                 isLoading = false
+                isRefreshing = false
             }
 
             override fun showQuizPacks(paketList: List<QuizPackage>) {
@@ -77,7 +86,21 @@ fun QuizScreen(navController: NavController) {
         onDispose { presenter.onDetach() }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    // Pull-to-refresh state
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            presenter.loadQuizPacks()
+        }
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -90,9 +113,32 @@ fun QuizScreen(navController: NavController) {
             if (isLoading && quizPacks.isEmpty()) { // Show loading only if there's no data yet
                 CircularProgressIndicator()
             } else if (errorMessage != null) {
-                Text(text = errorMessage!!)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(text = errorMessage!!, style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            errorMessage = null
+                            presenter.loadQuizPacks()
+                        }
+                    ) {
+                        Text("Coba Lagi")
+                    }
+                }
             } else if (quizPacks.isEmpty()) {
-                Text("Tidak ada paket soal yang tersedia.")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Tidak ada paket soal yang tersedia.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { presenter.loadQuizPacks() }) {
+                        Text("Refresh")
+                    }
+                }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(quizPacks) { pack ->
@@ -101,6 +147,13 @@ fun QuizScreen(navController: NavController) {
                 }
             }
         }
+
+        // Pull-to-refresh indicator
+        PullRefreshIndicator(
+            refreshing = isRefreshing,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 
