@@ -3,14 +3,11 @@ package com.example.misi_budaya.data.model
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.PropertyName
 
-// Model untuk Pilihan Jawaban
-data class Pilihan(
-    var id: String = "",
-    var gambar: String = "",
-    var teks: String = ""
-) {
-    constructor() : this("", "", "")
-}
+// This file is now only used for deserializing data from Firebase.
+// The primary model used within the app is Question.kt
+
+// The Pilihan data class has been removed from this file to avoid redeclaration.
+// The app now uses the Pilihan class defined in Question.kt
 
 // Model untuk Soal
 data class Soal(
