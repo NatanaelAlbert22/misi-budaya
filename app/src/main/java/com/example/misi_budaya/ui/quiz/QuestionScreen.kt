@@ -29,13 +29,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.misi_budaya.data.local.AppDatabase
-import com.example.misi_budaya.data.model.Soal
+import com.example.misi_budaya.data.model.Question
 import com.example.misi_budaya.data.repository.QuizRepository
 
 @Composable
 fun QuestionScreen(navController: NavController, quizPackId: String?) {
     var isLoading by remember { mutableStateOf(true) }
-    var currentSoal by remember { mutableStateOf<Soal?>(null) }
+    var currentQuestion by remember { mutableStateOf<Question?>(null) }
     var questionNumber by remember { mutableStateOf(0) }
     var totalQuestions by remember { mutableStateOf(0) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -43,7 +43,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
 
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val repository = remember { QuizRepository(db.quizPackageDao()) }
+    val repository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
     val scope = rememberCoroutineScope()
     val presenter = remember { QuestionPresenter(repository, scope) }
 
@@ -57,22 +57,20 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                 isLoading = false
             }
 
-            override fun showQuestions(soalList: List<Soal>) {}
+            override fun showQuestions(questionList: List<Question>) {}
 
             override fun showError(message: String) {
                 errorMessage = message
             }
 
             override fun navigateToResult(score: Int) {
-                // Navigate to the ResultScreen, replacing the current screen
-                // so the user can't go back to the last question.
                 navController.navigate("result_screen/$score") {
                     popUpTo(navController.currentDestination?.id ?: 0) { inclusive = true }
                 }
             }
 
-            override fun showCurrentQuestion(soal: Soal, number: Int, total: Int) {
-                currentSoal = soal
+            override fun showCurrentQuestion(question: Question, number: Int, total: Int) {
+                currentQuestion = question
                 questionNumber = number
                 totalQuestions = total
                 onOptionSelected(null) // Reset selection for the new question
@@ -96,7 +94,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
             CircularProgressIndicator()
         } else if (errorMessage != null) {
             Text(text = errorMessage!!)
-        } else if (currentSoal != null) {
+        } else if (currentQuestion != null) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -106,10 +104,10 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                 Text("Pertanyaan $questionNumber / $totalQuestions", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(currentSoal!!.soal, style = MaterialTheme.typography.headlineSmall)
+                Text(currentQuestion!!.questionText, style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                currentSoal!!.pilihan.forEach { option ->
+                currentQuestion!!.choices.forEach { option ->
                     Row(
                         Modifier
                             .fillMaxWidth()
