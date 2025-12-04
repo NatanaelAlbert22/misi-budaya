@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
 import com.example.misi_budaya.data.local.UserPreferencesManager
+import com.example.misi_budaya.data.repository.UserRepository
 import com.example.misi_budaya.ui.components.OnlineModeDialog
 import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
@@ -86,6 +87,7 @@ fun HomeScreen(
     val networkMonitor = remember { NetworkMonitor(context) }
     val preferencesManager = remember { UserPreferencesManager(context) }
     val auth = remember { FirebaseAuth.getInstance() }
+    val userRepository = remember { UserRepository() }
     
     val isOnline by networkMonitor.observeNetworkStatus().collectAsState(initial = false)
     val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
@@ -100,10 +102,39 @@ fun HomeScreen(
         }
     }
     
-    // State untuk user data (nanti bisa diambil dari Firebase/Database)
-    var userName by remember { mutableStateOf("Misi Budaya") }
-    var userLevel by remember { mutableStateOf(12) }
-    var userXP by remember { mutableStateOf(2450) }
+    // State untuk user data - fetch dari Firestore
+    var userName by remember { mutableStateOf("Guest") }
+    var userLevel by remember { mutableStateOf(1) }
+    var userXP by remember { mutableStateOf(0) }
+    var isLoadingUser by remember { mutableStateOf(true) }
+    
+    // Fetch user profile dari Firestore
+    LaunchedEffect(auth.currentUser?.uid) {
+        val uid = auth.currentUser?.uid
+        if (uid != null && !isOfflineMode) {
+            isLoadingUser = true
+            userRepository.getUserProfile(uid).fold(
+                onSuccess = { profile ->
+                    userName = profile.username.ifEmpty { "User" }
+                    // Calculate level dari total score
+                    userLevel = (profile.totalScore / 1000).toInt() + 1
+                    userXP = profile.totalScore.toInt()
+                    isLoadingUser = false
+                },
+                onFailure = {
+                    userName = auth.currentUser?.email?.split("@")?.firstOrNull() ?: "User"
+                    isLoadingUser = false
+                }
+            )
+        } else if (uid != null && isOfflineMode) {
+            // Offline mode - tampilkan dari email
+            userName = auth.currentUser?.email?.split("@")?.firstOrNull() ?: "Guest"
+            isLoadingUser = false
+        } else {
+            userName = "Guest"
+            isLoadingUser = false
+        }
+    }
     
     // Progress data
     var completedMissions by remember { mutableStateOf(3) }
