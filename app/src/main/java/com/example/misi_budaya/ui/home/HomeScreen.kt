@@ -23,14 +23,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalActivity
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -64,7 +67,11 @@ data class QuizCategory(
 )
 
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    isDarkTheme: Boolean = false,
+    onThemeChange: (Boolean) -> Unit = {}
+) {
     // State untuk user data (nanti bisa diambil dari Firebase/Database)
     var userName by remember { mutableStateOf("Misi Budaya") }
     var userLevel by remember { mutableStateOf(12) }
@@ -172,21 +179,40 @@ fun HomeScreen(navController: NavController) {
                     }
                 }
 
-                // Avatar (optional - bisa ditambahkan nanti)
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFE0E0E0)
+                // Right side: Dark Mode Toggle + Avatar
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center
+                    // Dark Mode Toggle
+                    IconButton(
+                        onClick = { onThemeChange(!isDarkTheme) },
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "User Avatar",
-                            tint = Color(0xFF9E9E9E),
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode",
+                            tint = if (isDarkTheme) Color(0xFFFFA000) else Color(0xFF424242),
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    // Avatar
+                    Surface(
+                        modifier = Modifier.size(40.dp),
+                        shape = CircleShape,
+                        color = Color(0xFFE0E0E0)
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "User Avatar",
+                                tint = Color(0xFF9E9E9E),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
