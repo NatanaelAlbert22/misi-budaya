@@ -6,6 +6,10 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,8 +29,13 @@ class MainActivity : ComponentActivity(), LoginContract.View {
         presenter = LoginPresenter(this)
 
         setContent {
-            MisibudayaTheme {
-                MyApp()
+            var isDarkTheme by remember { mutableStateOf(false) }
+            
+            MisibudayaTheme(darkTheme = isDarkTheme) {
+                MyApp(
+                    isDarkTheme = isDarkTheme,
+                    onThemeChange = { isDarkTheme = it }
+                )
             }
         }
     }
@@ -57,7 +66,10 @@ class MainActivity : ComponentActivity(), LoginContract.View {
 }
 
 @Composable
-fun MyApp() {
+fun MyApp(
+    isDarkTheme: Boolean = false,
+    onThemeChange: (Boolean) -> Unit = {}
+) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
@@ -70,7 +82,11 @@ fun MyApp() {
             SignUpScreen(navController = navController)
         }
         composable("home") {
-            MainScreen(rootNavController = navController)
+            MainScreen(
+                rootNavController = navController,
+                isDarkTheme = isDarkTheme,
+                onThemeChange = onThemeChange
+            )
         }
     }
 }

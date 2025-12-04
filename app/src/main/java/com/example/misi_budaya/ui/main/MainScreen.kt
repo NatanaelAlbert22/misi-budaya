@@ -45,7 +45,11 @@ val bottomNavItems = listOf(
 )
 
 @Composable
-fun MainScreen(rootNavController: NavController) {
+fun MainScreen(
+    rootNavController: NavController,
+    isDarkTheme: Boolean = false,
+    onThemeChange: (Boolean) -> Unit = {}
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -87,7 +91,13 @@ fun MainScreen(rootNavController: NavController) {
             startDestination = "home_screen",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home_screen") { HomeScreen(navController = navController) }
+            composable("home_screen") { 
+                HomeScreen(
+                    navController = navController,
+                    isDarkTheme = isDarkTheme,
+                    onThemeChange = onThemeChange
+                )
+            }
             composable("quiz_screen") { QuizScreen(navController = navController) }
             composable("leaderboard_screen") { LeaderboardScreen() }
             composable("profile_screen") { ProfileScreen(rootNavController = rootNavController) }
