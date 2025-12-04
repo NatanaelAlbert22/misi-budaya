@@ -121,9 +121,25 @@ fun HomeScreen(
                     userXP = profile.totalScore.toInt()
                     isLoadingUser = false
                 },
-                onFailure = {
-                    userName = auth.currentUser?.email?.split("@")?.firstOrNull() ?: "User"
-                    isLoadingUser = false
+                onFailure = { error ->
+                    // Profile tidak ada, buat profile baru dengan username dari email
+                    val user = auth.currentUser
+                    if (user != null) {
+                        val defaultUsername = user.email?.split("@")?.firstOrNull() ?: "User"
+                        userRepository.createInitialProfile(user, defaultUsername).fold(
+                            onSuccess = {
+                                userName = defaultUsername
+                                isLoadingUser = false
+                            },
+                            onFailure = {
+                                userName = defaultUsername
+                                isLoadingUser = false
+                            }
+                        )
+                    } else {
+                        userName = "User"
+                        isLoadingUser = false
+                    }
                 }
             )
         } else if (uid != null && isOfflineMode) {

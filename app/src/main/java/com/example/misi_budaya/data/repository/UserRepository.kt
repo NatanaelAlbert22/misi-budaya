@@ -1,5 +1,6 @@
 package com.example.misi_budaya.data.repository
 
+import android.util.Log
 import com.example.misi_budaya.data.model.UserProfile
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -15,6 +16,10 @@ class UserRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val usersCollection = firestore.collection("users")
+    
+    companion object {
+        private const val TAG = "UserRepository"
+    }
     
     /**
      * Get user profile dari Firestore
@@ -50,12 +55,36 @@ class UserRepository {
      */
     suspend fun updateUsername(uid: String, newUsername: String): Result<Unit> {
         return try {
-            usersCollection.document(uid)
-                .update("username", newUsername)
-                .await()
+            Log.d(TAG, "Updating username for uid: $uid to: $newUsername")
+            
+            // Cek apakah document sudah ada
+            val docRef = usersCollection.document(uid)
+            val snapshot = docRef.get().await()
+            
+            if (snapshot.exists()) {
+                // Document ada, update saja
+                docRef.update("username", newUsername).await()
+                Log.d(TAG, "Username updated successfully")
+            } else {
+                // Document belum ada, buat baru
+                Log.d(TAG, "Document not found, creating new profile")
+                val currentUser = auth.currentUser
+                val profile = UserProfile(
+                    uid = uid,
+                    username = newUsername,
+                    email = currentUser?.email ?: "",
+                    totalScore = 0L,
+                    quizScores = emptyMap(),
+                    unlockedQuizzes = emptyMap()
+                )
+                docRef.set(profile).await()
+                Log.d(TAG, "Profile created with new username")
+            }
+            
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Log.e(TAG, "Failed to update username", e)
+            Result.failure(Exception("Gagal mengubah username: ${e.message}"))
         }
     }
     
@@ -68,19 +97,37 @@ class UserRepository {
         newPassword: String
     ): Result<Unit> {
         return try {
-            val user = auth.currentUser ?: return Result.failure(Exception("User not logged in"))
-            val email = user.email ?: return Result.failure(Exception("Email not found"))
+            val user = auth.currentUser ?: return Result.failure(Exception("User tidak login"))
+            val email = user.email ?: return Result.failure(Exception("Email tidak ditemukan"))
             
+            Log.d(TAG, "Re-authenticating user: $email")
             // Re-authenticate user dengan password lama
             val credential = EmailAuthProvider.getCredential(email, currentPassword)
             user.reauthenticate(credential).await()
             
+            Log.d(TAG, "Updating password")
             // Update password
             user.updatePassword(newPassword).await()
             
+            Log.d(TAG, "Password updated successfully")
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Log.e(TAG, "Failed to update password", e)
+            val errorMsg = when {
+                e is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> 
+                    "Password saat ini salah"
+                e.message?.contains("password is invalid") == true -> 
+                    "Password saat ini salah"
+                e.message?.contains("credential is incorrect") == true -> 
+                    "Password saat ini salah"
+                e.message?.contains("network") == true -> 
+                    "Tidak ada koneksi internet"
+                e.message?.contains("too-many-requests") == true -> 
+                    "Terlalu banyak percobaan, coba lagi nanti"
+                else -> 
+                    "Gagal mengubah password: ${e.message}"
+            }
+            Result.failure(Exception(errorMsg))
         }
     }
     
