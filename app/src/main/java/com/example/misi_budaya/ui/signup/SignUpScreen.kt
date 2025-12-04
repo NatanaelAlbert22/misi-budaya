@@ -36,10 +36,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -48,6 +50,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.misi_budaya.data.repository.UserRepository
+import kotlinx.coroutines.launch
 import com.example.misi_budaya.R
 import com.google.firebase.auth.FirebaseAuth
 
@@ -62,6 +66,8 @@ fun SignUpScreen(navController: NavController) {
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val firebaseAuth = FirebaseAuth.getInstance()
+    val userRepository = remember { UserRepository() }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -300,13 +306,31 @@ fun SignUpScreen(navController: NavController) {
                                     isLoading = true
                                     firebaseAuth.createUserWithEmailAndPassword(email, password)
                                         .addOnCompleteListener { task ->
-                                            isLoading = false
                                             if (task.isSuccessful) {
-                                                // Navigate to home on successful sign-up
-                                                navController.navigate("home") {
-                                                    popUpTo("login") { inclusive = true }
+                                                // Buat profile di Firestore
+                                                val user = task.result?.user
+                                                if (user != null) {
+                                                    scope.launch {
+                                                        userRepository.createInitialProfile(user, username).fold(
+                                                            onSuccess = {
+                                                                isLoading = false
+                                                                // Navigate to home on successful sign-up
+                                                                navController.navigate("home") {
+                                                                    popUpTo("login") { inclusive = true }
+                                                                }
+                                                            },
+                                                            onFailure = { error ->
+                                                                isLoading = false
+                                                                message = "Akun dibuat tapi gagal menyimpan profile: ${error.message}"
+                                                            }
+                                                        )
+                                                    }
+                                                } else {
+                                                    isLoading = false
+                                                    message = "Pendaftaran gagal"
                                                 }
                                             } else {
+                                                isLoading = false
                                                 message = task.exception?.message ?: "Pendaftaran gagal"
                                             }
                                         }

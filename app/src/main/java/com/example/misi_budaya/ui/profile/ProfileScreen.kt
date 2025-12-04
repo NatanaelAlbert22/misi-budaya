@@ -1,5 +1,6 @@
 package com.example.misi_budaya.ui.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,11 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -39,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -72,11 +77,17 @@ fun ProfileScreen(rootNavController: NavController) {
     var currentUsername by remember { mutableStateOf("") }
     var userEmail by remember { mutableStateOf("") }
     var isLoadingProfile by remember { mutableStateOf(true) }
+    var isGoogleUser by remember { mutableStateOf(false) }
     
     // Load user profile
     LaunchedEffect(currentUser?.uid) {
         if (currentUser != null) {
             userEmail = currentUser.email ?: ""
+            
+            // Cek apakah user login dengan Google
+            val providerData = currentUser.providerData
+            isGoogleUser = providerData.any { it.providerId == "google.com" }
+            
             if (!isOfflineMode) {
                 userRepository.getUserProfile(currentUser.uid).fold(
                     onSuccess = { profile ->
@@ -241,19 +252,89 @@ fun ProfileScreen(rootNavController: NavController) {
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Login Method
+                        Column {
+                            Text(
+                                text = "Metode Login",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isGoogleUser) 
+                                        Icons.Default.AccountCircle 
+                                    else 
+                                        Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = if (isGoogleUser) "Google Account" else "Email & Password",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Change Password Button
+            // Info text jika offline
+            if (isOfflineMode) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Text(
+                        text = "⚠️ Mode Offline: Edit username dan ubah password tidak tersedia. Aktifkan mode online untuk menggunakan fitur ini.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // Info text jika Google user
+            if (isGoogleUser) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "ℹ️ Akun Google",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Anda login dengan Google. Ubah password tidak tersedia. Untuk mengubah password, gunakan pengaturan akun Google Anda.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // Change Password Button (disabled untuk Google users)
             OutlinedButton(
                 onClick = { showChangePasswordDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isOfflineMode
+                enabled = !isOfflineMode && !isGoogleUser
             ) {
-                Text("Ubah Password")
+                Text(if (isGoogleUser) "Ubah Password (Tidak tersedia)" else "Ubah Password")
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -334,9 +415,18 @@ fun ProfileScreen(rootNavController: NavController) {
                             onSuccess = {
                                 currentUsername = newUsername
                                 showEditUsernameDialog = false
+                                Toast.makeText(
+                                    context,
+                                    "Username berhasil diubah!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
                             onFailure = { error ->
-                                // Handle error - bisa tambahkan toast/snackbar
+                                Toast.makeText(
+                                    context,
+                                    "Gagal mengubah username: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         )
                     }
@@ -354,10 +444,18 @@ fun ProfileScreen(rootNavController: NavController) {
                     userRepository.updatePassword(currentPassword, newPassword).fold(
                         onSuccess = {
                             showChangePasswordDialog = false
-                            // Bisa tambahkan toast/snackbar sukses
+                            Toast.makeText(
+                                context,
+                                "Password berhasil diubah!",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         },
                         onFailure = { error ->
-                            // Handle error - tampilkan pesan error
+                            Toast.makeText(
+                                context,
+                                "Gagal mengubah password: ${error.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     )
                 }
@@ -374,9 +472,10 @@ fun EditUsernameDialog(
 ) {
     var newUsername by remember { mutableStateOf(currentUsername) }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isLoading) onDismiss() },
         title = { Text("Edit Username") },
         text = {
             Column {
@@ -389,14 +488,21 @@ fun EditUsernameDialog(
                     label = { Text("Username Baru") },
                     singleLine = true,
                     isError = errorMessage.isNotEmpty(),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (errorMessage.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (isLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
             }
@@ -408,15 +514,23 @@ fun EditUsernameDialog(
                         newUsername.isBlank() -> errorMessage = "Username tidak boleh kosong"
                         newUsername.length < 3 -> errorMessage = "Username minimal 3 karakter"
                         newUsername.length > 20 -> errorMessage = "Username maksimal 20 karakter"
-                        else -> onSave(newUsername)
+                        newUsername == currentUsername -> errorMessage = "Username sama dengan sebelumnya"
+                        else -> {
+                            isLoading = true
+                            onSave(newUsername)
+                        }
                     }
-                }
+                },
+                enabled = !isLoading
             ) {
                 Text("Simpan")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
                 Text("Batal")
             }
         }
@@ -432,13 +546,14 @@ fun ChangePasswordDialog(
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     
     var showCurrentPassword by remember { mutableStateOf(false) }
     var showNewPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
     
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isLoading) onDismiss() },
         title = { Text("Ubah Password") },
         text = {
             Column {
@@ -451,6 +566,7 @@ fun ChangePasswordDialog(
                     },
                     label = { Text("Password Saat Ini") },
                     singleLine = true,
+                    enabled = !isLoading,
                     visualTransformation = if (showCurrentPassword) 
                         VisualTransformation.None 
                     else 
@@ -481,6 +597,7 @@ fun ChangePasswordDialog(
                     },
                     label = { Text("Password Baru") },
                     singleLine = true,
+                    enabled = !isLoading,
                     visualTransformation = if (showNewPassword) 
                         VisualTransformation.None 
                     else 
@@ -511,6 +628,7 @@ fun ChangePasswordDialog(
                     },
                     label = { Text("Konfirmasi Password Baru") },
                     singleLine = true,
+                    enabled = !isLoading,
                     visualTransformation = if (showConfirmPassword) 
                         VisualTransformation.None 
                     else 
@@ -532,11 +650,18 @@ fun ChangePasswordDialog(
                 )
                 
                 if (errorMessage.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                
+                if (isLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
             }
@@ -550,15 +675,22 @@ fun ChangePasswordDialog(
                         newPassword.length < 6 -> errorMessage = "Password minimal 6 karakter"
                         newPassword != confirmPassword -> errorMessage = "Password tidak cocok"
                         currentPassword == newPassword -> errorMessage = "Password baru harus berbeda"
-                        else -> onSave(currentPassword, newPassword)
+                        else -> {
+                            isLoading = true
+                            onSave(currentPassword, newPassword)
+                        }
                     }
-                }
+                },
+                enabled = !isLoading
             ) {
                 Text("Simpan")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
                 Text("Batal")
             }
         }
