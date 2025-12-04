@@ -39,9 +39,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +53,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
+import com.example.misi_budaya.data.local.UserPreferencesManager
+import com.example.misi_budaya.ui.components.OnlineModeDialog
+import com.example.misi_budaya.util.NetworkMonitor
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 data class QuizCategory(
     val name: String,
@@ -72,6 +81,25 @@ fun HomeScreen(
     isDarkTheme: Boolean = false,
     onThemeChange: (Boolean) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val auth = remember { FirebaseAuth.getInstance() }
+    
+    val isOnline by networkMonitor.observeNetworkStatus().collectAsState(initial = false)
+    val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
+    val hasSeenPrompt by preferencesManager.hasSeenOnlinePromptFlow.collectAsState(initial = false)
+    
+    var showOnlineModeDialog by remember { mutableStateOf(false) }
+    
+    // Detect ketika online dan masih dalam offline mode
+    LaunchedEffect(isOnline, isOfflineMode, hasSeenPrompt) {
+        if (isOnline && isOfflineMode && !hasSeenPrompt) {
+            showOnlineModeDialog = true
+        }
+    }
+    
     // State untuk user data (nanti bisa diambil dari Firebase/Database)
     var userName by remember { mutableStateOf("Misi Budaya") }
     var userLevel by remember { mutableStateOf(12) }
@@ -318,6 +346,42 @@ fun HomeScreen(
                 }
             }
         }
+    }
+    
+    // Dialog untuk switch ke online mode
+    if (showOnlineModeDialog) {
+        OnlineModeDialog(
+            onDismiss = {
+                showOnlineModeDialog = false
+                scope.launch {
+                    preferencesManager.markOnlinePromptSeen()
+                }
+            },
+            onStayOffline = {
+                showOnlineModeDialog = false
+                scope.launch {
+                    preferencesManager.markOnlinePromptSeen()
+                }
+            },
+            onSwitchToOnline = {
+                showOnlineModeDialog = false
+                scope.launch {
+                    preferencesManager.markOnlinePromptSeen()
+                    
+                    // Cek apakah user sudah login
+                    val currentUser = auth.currentUser
+                    if (currentUser != null) {
+                        // Sudah login, langsung switch ke online
+                        preferencesManager.setOfflineMode(false)
+                    } else {
+                        // Belum login, arahkan ke login
+                        // Tapi tetap di home dulu, nanti user bisa login dari profile
+                        // Atau bisa langsung navigate ke login jika mau
+                        preferencesManager.setOfflineMode(false)
+                    }
+                }
+            }
+        )
     }
 }
 
