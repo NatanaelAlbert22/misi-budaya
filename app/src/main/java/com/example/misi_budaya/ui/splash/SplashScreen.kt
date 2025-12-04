@@ -20,19 +20,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
+import com.example.misi_budaya.data.local.UserPreferencesManager
+import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun SplashScreen(navController: NavController) {
     val alpha = remember { Animatable(0f) }
+    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val preferencesManager = remember { UserPreferencesManager(context) }
 
     LaunchedEffect(key1 = true) {
         // Fade in animation
@@ -44,17 +51,41 @@ fun SplashScreen(navController: NavController) {
         // Wait for 2 seconds
         delay(2000)
         
-        // Check if user is logged in
+        // Cek status koneksi internet
+        val isOnline = networkMonitor.isOnline()
+        val isOfflineMode = preferencesManager.isOfflineModeFlow.first()
         val currentUser = auth.currentUser
-        if (currentUser != null) {
-            // User is logged in, go to home
-            navController.navigate("home") {
-                popUpTo("splash") { inclusive = true }
+        
+        when {
+            // Jika offline (no internet) -> langsung ke home dalam mode offline
+            !isOnline -> {
+                preferencesManager.setOfflineMode(true)
+                navController.navigate("home") {
+                    popUpTo("splash") { inclusive = true }
+                }
             }
-        } else {
-            // User is not logged in, go to login
-            navController.navigate("login") {
-                popUpTo("splash") { inclusive = true }
+            
+            // Jika online tapi user pilih offline mode -> ke home dengan offline mode
+            isOfflineMode -> {
+                navController.navigate("home") {
+                    popUpTo("splash") { inclusive = true }
+                }
+            }
+            
+            // Jika online dan user sudah login -> ke home dengan online mode
+            isOnline && currentUser != null -> {
+                preferencesManager.setOfflineMode(false)
+                navController.navigate("home") {
+                    popUpTo("splash") { inclusive = true }
+                }
+            }
+            
+            // Jika online tapi belum login -> ke login
+            else -> {
+                preferencesManager.setOfflineMode(false)
+                navController.navigate("login") {
+                    popUpTo("splash") { inclusive = true }
+                }
             }
         }
     }
