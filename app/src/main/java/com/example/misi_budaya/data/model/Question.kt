@@ -31,6 +31,7 @@ data class Question(
     val id: String, // Using the ID from Firebase as the primary key
     val quizPackageName: String, // Foreign key to QuizPackage
     val questionText: String,
+    val questionImageUrl: String = "", // URL gambar soal dari Cloudinary
     val choices: List<Pilihan>,
     val correctAnswerId: String
 )

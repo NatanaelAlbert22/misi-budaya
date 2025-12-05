@@ -103,53 +103,60 @@ fun HomeScreen(
     }
     
     // State untuk user data - fetch dari Firestore
-    var userName by remember { mutableStateOf("Guest") }
+    var userName by remember { mutableStateOf("") }
     var userLevel by remember { mutableStateOf(1) }
     var userXP by remember { mutableStateOf(0) }
     var isLoadingUser by remember { mutableStateOf(true) }
     
     // Fetch user profile dari Firestore
-    LaunchedEffect(auth.currentUser?.uid) {
-        val uid = auth.currentUser?.uid
-        if (uid != null && !isOfflineMode) {
-            isLoadingUser = true
-            userRepository.getUserProfile(uid).fold(
-                onSuccess = { profile ->
-                    userName = profile.username.ifEmpty { "User" }
-                    // Calculate level dari total score
-                    userLevel = (profile.totalScore / 1000).toInt() + 1
-                    userXP = profile.totalScore.toInt()
-                    isLoadingUser = false
-                },
-                onFailure = { error ->
-                    // Profile tidak ada, buat profile baru dengan username dari email
-                    val user = auth.currentUser
-                    if (user != null) {
-                        val defaultUsername = user.email?.split("@")?.firstOrNull() ?: "User"
-                        userRepository.createInitialProfile(user, defaultUsername).fold(
-                            onSuccess = {
-                                userName = defaultUsername
-                                isLoadingUser = false
-                            },
-                            onFailure = {
-                                userName = defaultUsername
-                                isLoadingUser = false
-                            }
-                        )
-                    } else {
-                        userName = "User"
-                        isLoadingUser = false
-                    }
-                }
-            )
-        } else if (uid != null && isOfflineMode) {
-            // Offline mode - tampilkan dari email
-            userName = auth.currentUser?.email?.split("@")?.firstOrNull() ?: "Guest"
-            isLoadingUser = false
-        } else {
+    LaunchedEffect(auth.currentUser, isOfflineMode) {
+        val user = auth.currentUser
+        val uid = user?.uid
+        
+        if (uid == null) {
+            // Tidak ada user login
             userName = "Guest"
             isLoadingUser = false
+            return@LaunchedEffect
         }
+        
+        if (isOfflineMode) {
+            // Offline mode - tampilkan dari email
+            userName = user.email?.split("@")?.firstOrNull() ?: user.displayName ?: "User"
+            isLoadingUser = false
+            return@LaunchedEffect
+        }
+        
+        // Online mode - fetch dari Firestore
+        isLoadingUser = true
+        userRepository.getUserProfile(uid).fold(
+            onSuccess = { profile ->
+                userName = profile.username.ifEmpty { 
+                    user.displayName ?: user.email?.split("@")?.firstOrNull() ?: "User" 
+                }
+                // Calculate level dari total score
+                userLevel = (profile.totalScore / 1000).toInt() + 1
+                userXP = profile.totalScore.toInt()
+                isLoadingUser = false
+            },
+            onFailure = { error ->
+                // Profile tidak ada, buat profile baru dengan username dari email
+                val defaultUsername = user.displayName 
+                    ?: user.email?.split("@")?.firstOrNull() 
+                    ?: "User"
+                    
+                userRepository.createInitialProfile(user, defaultUsername).fold(
+                    onSuccess = {
+                        userName = defaultUsername
+                        isLoadingUser = false
+                    },
+                    onFailure = {
+                        userName = defaultUsername
+                        isLoadingUser = false
+                    }
+                )
+            }
+        )
     }
     
     // Progress data

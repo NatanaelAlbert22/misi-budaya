@@ -10,7 +10,7 @@ import com.example.misi_budaya.data.model.QuestionDao
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.model.QuizPackageDao
 
-@Database(entities = [QuizPackage::class, Question::class], version = 6, exportSchema = false) // Incremented version
+@Database(entities = [QuizPackage::class, Question::class], version = 7, exportSchema = false) // Incremented version for questionImageUrl field
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun quizPackageDao(): QuizPackageDao
@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "misi_budaya_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance
