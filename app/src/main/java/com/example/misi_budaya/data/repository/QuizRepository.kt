@@ -44,10 +44,26 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
 
     suspend fun refreshPaketList() {
         try {
+            android.util.Log.d("QuizRepository", "Starting refreshPaketList from Firebase")
             val result = paketCollection.get().await()
-            val firebasePaketList = result.documents.mapNotNull { document ->
-                document.toObject(Paket::class.java)
+            android.util.Log.d("QuizRepository", "Firebase returned ${result.documents.size} documents")
+            
+            // Log setiap dokumen untuk debugging
+            result.documents.forEach { doc ->
+                android.util.Log.d("QuizRepository", "Document ID: ${doc.id}, Data: ${doc.data}")
             }
+            
+            val firebasePaketList = result.documents.mapNotNull { document ->
+                val paket = document.toObject(Paket::class.java)
+                if (paket != null) {
+                    paket.id = document.id
+                    android.util.Log.d("QuizRepository", "Parsed Paket: namaPaket=${paket.namaPaket}, isSecret=${paket.isSecret}")
+                } else {
+                    android.util.Log.w("QuizRepository", "Failed to parse document ${document.id}")
+                }
+                paket
+            }
+            android.util.Log.d("QuizRepository", "Parsed ${firebasePaketList.size} Paket objects")
 
             val packagesToUpsert = mutableListOf<QuizPackage>()
 
@@ -61,11 +77,15 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                     isCompleted = existingPackage?.isCompleted ?: false
                 )
                 packagesToUpsert.add(mergedPackage)
+                android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}")
             }
 
+            android.util.Log.d("QuizRepository", "Inserting ${packagesToUpsert.size} packages to Room")
             quizPackageDao.insertAll(*packagesToUpsert.toTypedArray())
+            android.util.Log.d("QuizRepository", "Successfully inserted packages to Room")
 
         } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Error in refreshPaketList", e)
             throw e
         }
     }
@@ -87,7 +107,8 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                 id = soal.id,
                 quizPackageName = paketId,
                 questionText = soal.soal,
-                choices = soal.pilihan.map { Pilihan(it.id, it.teks) },
+                questionImageUrl = soal.gambarSoal,
+                choices = soal.pilihan.map { Pilihan(it.id, it.teks, it.gambar) },
                 correctAnswerId = soal.jawabanBenar
             )
         }

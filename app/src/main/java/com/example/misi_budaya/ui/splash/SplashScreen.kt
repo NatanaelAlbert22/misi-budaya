@@ -65,26 +65,22 @@ fun SplashScreen(navController: NavController) {
                 }
             }
             
-            // Jika online tapi user pilih offline mode -> ke home dengan offline mode
-            isOfflineMode -> {
-                navController.navigate("home") {
-                    popUpTo("splash") { inclusive = true }
-                }
-            }
-            
-            // Jika online dan user sudah login -> ke home dengan online mode
-            isOnline && currentUser != null -> {
+            // Jika online -> set ke online mode (kecuali user manual pilih offline)
+            isOnline -> {
+                // Prioritas: selalu set online jika ada internet
+                // User bisa manual ubah di ProfileScreen nanti
                 preferencesManager.setOfflineMode(false)
-                navController.navigate("home") {
-                    popUpTo("splash") { inclusive = true }
-                }
-            }
-            
-            // Jika online tapi belum login -> ke login
-            else -> {
-                preferencesManager.setOfflineMode(false)
-                navController.navigate("login") {
-                    popUpTo("splash") { inclusive = true }
+                
+                if (currentUser != null) {
+                    // User sudah login -> ke home
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                } else {
+                    // User belum login -> ke login
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
             }
         }

@@ -343,9 +343,8 @@ fun ProfileScreen(rootNavController: NavController) {
             Button(
                 onClick = {
                     FirebaseAuth.getInstance().signOut()
-                    scope.launch {
-                        preferencesManager.setOfflineMode(true)
-                    }
+                    // Biarkan mode tetap sesuai preference user
+                    // SplashScreen akan handle auto online jika ada internet
                     rootNavController.navigate("login") {
                         popUpTo(rootNavController.graph.startDestinationId) { inclusive = true }
                     }
