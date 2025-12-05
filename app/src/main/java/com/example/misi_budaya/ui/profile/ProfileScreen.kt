@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,14 +74,17 @@ fun ProfileScreen(rootNavController: NavController) {
     var showEditUsernameDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     
-    // User profile state
-    var currentUsername by remember { mutableStateOf("") }
-    var userEmail by remember { mutableStateOf("") }
-    var isLoadingProfile by remember { mutableStateOf(true) }
-    var isGoogleUser by remember { mutableStateOf(false) }
+    // User profile state dengan rememberSaveable
+    var currentUsername by rememberSaveable { mutableStateOf("") }
+    var userEmail by rememberSaveable { mutableStateOf("") }
+    var isLoadingProfile by rememberSaveable { mutableStateOf(true) }
+    var isGoogleUser by rememberSaveable { mutableStateOf(false) }
+    var hasLoadedProfile by rememberSaveable { mutableStateOf(false) }
     
-    // Load user profile
-    LaunchedEffect(currentUser?.uid) {
+    // Load user profile - HANYA SEKALI
+    LaunchedEffect(Unit) {
+        if (hasLoadedProfile) return@LaunchedEffect // Skip jika sudah pernah load
+        
         if (currentUser != null) {
             userEmail = currentUser.email ?: ""
             
@@ -93,18 +97,22 @@ fun ProfileScreen(rootNavController: NavController) {
                     onSuccess = { profile ->
                         currentUsername = profile.username
                         isLoadingProfile = false
+                        hasLoadedProfile = true
                     },
                     onFailure = {
                         currentUsername = userEmail.split("@").firstOrNull() ?: ""
                         isLoadingProfile = false
+                        hasLoadedProfile = true
                     }
                 )
             } else {
                 currentUsername = userEmail.split("@").firstOrNull() ?: ""
                 isLoadingProfile = false
+                hasLoadedProfile = true
             }
         } else {
             isLoadingProfile = false
+            hasLoadedProfile = true
         }
     }
 

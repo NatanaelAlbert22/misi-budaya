@@ -45,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,14 +103,17 @@ fun HomeScreen(
         }
     }
     
-    // State untuk user data - fetch dari Firestore
-    var userName by remember { mutableStateOf("") }
-    var userLevel by remember { mutableStateOf(1) }
-    var userXP by remember { mutableStateOf(0) }
-    var isLoadingUser by remember { mutableStateOf(true) }
+    // State untuk user data - fetch dari Firestore dengan rememberSaveable
+    var userName by rememberSaveable { mutableStateOf("") }
+    var userLevel by rememberSaveable { mutableStateOf(1) }
+    var userXP by rememberSaveable { mutableStateOf(0) }
+    var isLoadingUser by rememberSaveable { mutableStateOf(true) }
+    var hasLoadedUser by rememberSaveable { mutableStateOf(false) }
     
-    // Fetch user profile dari Firestore
-    LaunchedEffect(auth.currentUser, isOfflineMode) {
+    // Fetch user profile dari Firestore - HANYA SEKALI
+    LaunchedEffect(Unit) {
+        if (hasLoadedUser) return@LaunchedEffect // Skip jika sudah pernah load
+        
         val user = auth.currentUser
         val uid = user?.uid
         
@@ -117,6 +121,7 @@ fun HomeScreen(
             // Tidak ada user login
             userName = "Guest"
             isLoadingUser = false
+            hasLoadedUser = true
             return@LaunchedEffect
         }
         
@@ -124,6 +129,7 @@ fun HomeScreen(
             // Offline mode - tampilkan dari email
             userName = user.email?.split("@")?.firstOrNull() ?: user.displayName ?: "User"
             isLoadingUser = false
+            hasLoadedUser = true
             return@LaunchedEffect
         }
         
@@ -138,6 +144,7 @@ fun HomeScreen(
                 userLevel = (profile.totalScore / 1000).toInt() + 1
                 userXP = profile.totalScore.toInt()
                 isLoadingUser = false
+                hasLoadedUser = true
             },
             onFailure = { error ->
                 // Profile tidak ada, buat profile baru dengan username dari email
@@ -149,10 +156,12 @@ fun HomeScreen(
                     onSuccess = {
                         userName = defaultUsername
                         isLoadingUser = false
+                        hasLoadedUser = true
                     },
                     onFailure = {
                         userName = defaultUsername
                         isLoadingUser = false
+                        hasLoadedUser = true
                     }
                 )
             }
