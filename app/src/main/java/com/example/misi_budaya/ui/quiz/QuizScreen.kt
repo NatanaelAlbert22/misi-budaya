@@ -31,10 +31,16 @@ import androidx.navigation.NavController
 import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun QuizScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) } // Start with loading
+    var isRefreshing by remember { mutableStateOf(false) }
     var quizPacks by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -44,14 +50,23 @@ fun QuizScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val presenter = remember { QuizPresenter(repository, scope) }
 
+    val pullRefreshState = rememberPullRefreshState(isRefreshing, onRefresh = {
+        // When the user triggers a pull-to-refresh, show the refresh indicator and call presenter
+        isRefreshing = true
+        presenter.onRefresh()
+    })
+
     val view = remember(navController) {
         object : QuizContract.View {
             override fun showLoading() {
+                // Full-screen loading state (e.g., initial load). Ensure pull indicator isn't shown as a full-screen loader.
                 isLoading = true
+                isRefreshing = false
             }
 
             override fun hideLoading() {
                 isLoading = false
+                isRefreshing = false
             }
 
             override fun showQuizPacks(paketList: List<QuizPackage>) {
@@ -77,7 +92,12 @@ fun QuizScreen(navController: NavController) {
         onDispose { presenter.onDetach() }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState),
+        contentAlignment = Alignment.TopCenter
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -101,6 +121,12 @@ fun QuizScreen(navController: NavController) {
                 }
             }
         }
+
+        PullRefreshIndicator(
+            refreshing = isRefreshing,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 

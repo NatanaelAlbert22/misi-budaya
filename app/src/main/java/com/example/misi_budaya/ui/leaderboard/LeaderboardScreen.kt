@@ -9,15 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +49,11 @@ fun LeaderboardScreen() {
     val scope = rememberCoroutineScope()
     val presenter = remember { LeaderboardPresenter(repository, scope) }
 
-    val pullRefreshState = rememberPullRefreshState(isRefreshing, { presenter.onRefresh() })
+    // set isRefreshing = true when pull is triggered so indicator displays regardless of where user drags
+    val pullRefreshState = rememberPullRefreshState(isRefreshing, onRefresh = {
+        isRefreshing = true
+        presenter.onRefresh()
+    })
 
     val view = remember {
         object : LeaderboardContract.View {
@@ -89,6 +92,7 @@ fun LeaderboardScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -102,9 +106,10 @@ fun LeaderboardScreen() {
             } else if (leaderboard.isEmpty()) {
                 Text("Papan peringkat masih kosong.")
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(leaderboard) { index, user ->
-                        LeaderboardItem(rank = index + 1, user = user)
+                leaderboard.forEachIndexed { index, user ->
+                    LeaderboardItem(rank = index + 1, user = user)
+                    if (index < leaderboard.size - 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }

@@ -94,4 +94,48 @@ class QuizPresenter(private val repository: QuizRepository, private val scope: C
     override fun onPaketClicked(paket: QuizPackage) {
         view?.navigateToQuestions(paket.name) // Navigate with the quiz name (the primary key)
     }
+
+    // New: explicit refresh handler for pull-to-refresh
+    override fun onRefresh() {
+        // Do not show full-screen loading here because pull-to-refresh indicator is used in UI
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    var retryCount = 0
+                    val maxRetries = 3
+                    var lastException: Exception? = null
+                    var success = false
+
+                    while (retryCount < maxRetries && !success) {
+                        try {
+                            withTimeout(30_000L) {
+                                Log.d("QuizPresenter", "Manual refresh from Firebase (attempt ${retryCount + 1})")
+                                repository.refreshPaketList()
+                            }
+                            success = true
+                        } catch (e: Exception) {
+                            lastException = e
+                            retryCount++
+                            if (retryCount < maxRetries) {
+                                delay(2000L * retryCount)
+                            }
+                        }
+                    }
+
+                    if (!success) {
+                        throw lastException ?: Exception("Unknown error")
+                    }
+                }
+
+                // success -> local Flow from repository will propagate updated data to view
+            } catch (e: Exception) {
+                Log.e("QuizPresenter", "Manual refresh failed", e)
+                // keep silent if local data exists; optionally view?.showError(...)
+            } finally {
+                withContext(Dispatchers.Main) {
+                    view?.hideLoading()
+                }
+            }
+        }
+    }
 }
