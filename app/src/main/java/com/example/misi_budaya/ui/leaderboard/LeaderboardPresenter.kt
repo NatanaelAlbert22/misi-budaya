@@ -1,6 +1,5 @@
 package com.example.misi_budaya.ui.leaderboard
 
-import com.example.misi_budaya.data.model.UserProfile
 import com.example.misi_budaya.data.repository.QuizRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -24,7 +23,7 @@ class LeaderboardPresenter(private val repository: QuizRepository, private val s
     }
 
     override fun onRefresh() {
-        // Don't show the full-screen loading indicator, the pull-to-refresh indicator is enough.
+        // Force fetch fresh data from Firestore (pull-to-refresh always gets latest)
         fetchData()
     }
 
@@ -32,8 +31,7 @@ class LeaderboardPresenter(private val repository: QuizRepository, private val s
         scope.launch {
             try {
                 val users = repository.getLeaderboardData()
-                val processedUsers = users.map {
-                    user ->
+                val processedUsers = users.map { user ->
                     if (user.username.isBlank() && user.email.isNotBlank()) {
                         val usernameFromEmail = user.email.split("@")[0]
                         user.copy(username = usernameFromEmail)

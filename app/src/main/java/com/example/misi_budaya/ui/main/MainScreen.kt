@@ -1,5 +1,6 @@
 package com.example.misi_budaya.ui.main
 
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -12,9 +13,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.ui.home.HomeScreen
 import com.example.misi_budaya.ui.leaderboard.LeaderboardScreen
 import com.example.misi_budaya.ui.profile.ProfileScreen
@@ -31,6 +38,9 @@ import com.example.misi_budaya.ui.quiz.QuestionScreen
 import com.example.misi_budaya.ui.quiz.QuizDescriptionScreen
 import com.example.misi_budaya.ui.quiz.QuizScreen
 import com.example.misi_budaya.ui.quiz.ResultScreen
+import com.example.misi_budaya.util.NetworkMonitor
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 data class BottomNavItem(
     val label: String,
@@ -52,6 +62,31 @@ fun MainScreen(
     onThemeChange: (Boolean) -> Unit = {}
 ) {
     val navController = rememberNavController()
+    // Background sync: listen to network changes and sync scores when online
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val repository = remember { com.example.misi_budaya.data.repository.QuizRepository(db.quizPackageDao(), db.questionDao()) }
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val scope = rememberCoroutineScope()
+    val auth = remember { FirebaseAuth.getInstance() }
+    val isOnline by networkMonitor.observeNetworkStatus().collectAsState(initial = false)
+
+    // Auto sync when network becomes online
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                scope.launch {
+                    try {
+                        repository.syncScoresForUser(currentUser.uid)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainScreen", "Auto sync failed", e)
+                    }
+                }
+            }
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     

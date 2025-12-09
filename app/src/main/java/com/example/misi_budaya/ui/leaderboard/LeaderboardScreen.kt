@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,12 @@ fun LeaderboardScreen() {
     val repository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
     val scope = rememberCoroutineScope()
     val presenter = remember { LeaderboardPresenter(repository, scope) }
+    // Subscribe to global events: refresh leaderboard on demand
+    LaunchedEffect(Unit) {
+        com.example.misi_budaya.util.AppEvents.leaderboardRefresh.collect {
+            presenter.onRefresh()
+        }
+    }
 
     // set isRefreshing = true when pull is triggered so indicator displays regardless of where user drags
     val pullRefreshState = rememberPullRefreshState(isRefreshing, onRefresh = {

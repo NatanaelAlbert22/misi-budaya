@@ -91,12 +91,13 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
     }
 
     // --- Questions ---
-    suspend fun getSoalList(paketId: String): List<Question> {
-        val localQuestions = questionDao.getQuestionsForQuiz(paketId)
-        if (localQuestions.isNotEmpty()) {
+    suspend fun getSoalList(paketId: String, forceRefresh: Boolean = false): List<Question> {
+        var localQuestions = questionDao.getQuestionsForQuiz(paketId)
+        if (localQuestions.isNotEmpty() && !forceRefresh) {
             return localQuestions
         }
 
+        // If local is empty or force refresh, try fetching from Firebase
         val firebaseSoalList = soalCollection.whereEqualTo("paketId", paketId).get().await()
             .documents.mapNotNull { document ->
                 document.toObject(Soal::class.java)?.apply { id = document.id }
@@ -243,45 +244,54 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             // Merge keys
             val allKeys = (remoteScores.keys + localPackages.map { it.name }).toSet()
 
-            for (quizName in allKeys) {
-                val localPkg = localPackages.find { it.name == quizName }
-                val localScore = localPkg?.score ?: 0
-                val remoteScore = (remoteScores[quizName] ?: 0L).toInt()
+            var anyRemoteUpdated = false
+             for (quizName in allKeys) {
+                 val localPkg = localPackages.find { it.name == quizName }
+                 val localScore = localPkg?.score ?: 0
+                 val remoteScore = (remoteScores[quizName] ?: 0L).toInt()
 
-                val winnerScore = maxOf(localScore, remoteScore)
+                 val winnerScore = maxOf(localScore, remoteScore)
 
-                // update local
-                if (localPkg != null) {
-                    val updatedPkg = localPkg.copy(score = winnerScore, isCompleted = winnerScore > 0)
-                    quizPackageDao.updateQuizPackage(updatedPkg)
-                } else {
-                    // insert new package to local
-                    val newPkg = QuizPackage(name = quizName, description = "", score = winnerScore, isCompleted = winnerScore > 0)
-                    quizPackageDao.insertAll(newPkg)
-                }
+                 // update local
+                 if (localPkg != null) {
+                     val updatedPkg = localPkg.copy(score = winnerScore, isCompleted = winnerScore > 0)
+                     quizPackageDao.updateQuizPackage(updatedPkg)
+                 } else {
+                     // insert new package to local
+                     val newPkg = QuizPackage(name = quizName, description = "", score = winnerScore, isCompleted = winnerScore > 0)
+                     quizPackageDao.insertAll(newPkg)
+                 }
 
-                // update remote if needed
-                val remoteScoreLong = remoteScores[quizName] ?: 0L
-                if (winnerScore.toLong() > remoteScoreLong) {
-                    // write to firestore user document
-                    try {
-                        val userRef = usersCollection.document(uid)
-                        userRef.update("quizScores.$quizName", winnerScore.toLong()).await()
-                        // adjust totalScore as naive sum difference (for safety, we can recalc totalScore server-side)
-                        val doc = userRef.get().await()
-                        val oldTotal = doc.getLong("totalScore") ?: 0L
-                        val oldForQuiz = remoteScoreLong
-                        val newTotal = oldTotal + (winnerScore.toLong() - oldForQuiz)
-                        userRef.update("totalScore", newTotal).await()
-                    } catch (e: Exception) {
-                        android.util.Log.e("QuizRepository", "Failed to update remote score for $quizName", e)
-                    }
-                }
+                 // update remote if needed
+                 val remoteScoreLong = remoteScores[quizName] ?: 0L
+                 if (winnerScore.toLong() > remoteScoreLong) {
+                     // write to firestore user document
+                     try {
+                         val userRef = usersCollection.document(uid)
+                         userRef.update("quizScores.$quizName", winnerScore.toLong()).await()
+                         // adjust totalScore as naive sum difference (for safety, we can recalc totalScore server-side)
+                         val doc = userRef.get().await()
+                         val oldTotal = doc.getLong("totalScore") ?: 0L
+                         val oldForQuiz = remoteScoreLong
+                         val newTotal = oldTotal + (winnerScore.toLong() - oldForQuiz)
+                         userRef.update("totalScore", newTotal).await()
+                         // notify leaderboard listeners that remote data changed
+                         try { com.example.misi_budaya.util.AppEvents.emitLeaderboardRefresh() } catch (_: Exception) {}
+                        anyRemoteUpdated = true
+                     } catch (e: Exception) {
+                         android.util.Log.e("QuizRepository", "Failed to update remote score for $quizName", e)
+                     }
+                 }
+             }
+
+            // If any remote updates occurred, emit a final refresh event to be safe
+            if (anyRemoteUpdated) {
+                try { com.example.misi_budaya.util.AppEvents.emitLeaderboardRefresh() } catch (_: Exception) {}
             }
-        } catch (e: Exception) {
-            android.util.Log.e("QuizRepository", "Error during syncScoresForUser", e)
-        }
-    }
+         } catch (e: Exception) {
+             android.util.Log.e("QuizRepository", "Error in syncScoresForUser", e)
+         }
+     }
 
     suspend fun getPaketByName(namaPaket: String): Paket? {
         return try {
@@ -293,4 +303,54 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             null
         }
     }
+
+    suspend fun downloadAllQuestionsForAllPackages() {
+        try {
+            android.util.Log.d("QuizRepository", "Starting download all questions for all packages")
+
+            // Get all packages from local DB
+            val allPackages = quizPackageDao.getAllQuizPackagesOnce()
+
+            for (paket in allPackages) {
+                try {
+                    // Get questions from Firebase for this package
+                    val firebaseSoalList = soalCollection.whereEqualTo("paketId", paket.name).get().await()
+                        .documents.mapNotNull { document ->
+                            document.toObject(Soal::class.java)?.apply { id = document.id }
+                        }
+
+                    if (firebaseSoalList.isNotEmpty()) {
+                        val questionsToCache = firebaseSoalList.map { soal ->
+                            Question(
+                                id = soal.id,
+                                quizPackageName = paket.name,
+                                questionText = soal.soal,
+                                questionImageUrl = soal.gambarSoal,
+                                choices = soal.pilihan.map { Pilihan(it.id, it.teks, it.gambar) },
+                                correctAnswerId = soal.jawabanBenar
+                            )
+                        }
+
+                        android.util.Log.d("QuizRepository", "Inserting ${questionsToCache.size} questions for package ${paket.name}")
+                        // insertAll uses OnConflictStrategy.REPLACE, so old questions will be replaced
+                        questionDao.insertAll(questionsToCache)
+                        android.util.Log.d("QuizRepository", "Successfully inserted questions for ${paket.name}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("QuizRepository", "Failed to download questions for ${paket.name}", e)
+                    // Continue downloading for other packages even if one fails
+                }
+            }
+
+            android.util.Log.d("QuizRepository", "Successfully downloaded all questions")
+            // notify UI that questions are available locally
+            try {
+                com.example.misi_budaya.util.AppEvents.emitQuestionsDownloaded()
+            } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Error in downloadAllQuestionsForAllPackages", e)
+            throw e
+        }
+    }
+
 }

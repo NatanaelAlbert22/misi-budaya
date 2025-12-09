@@ -187,6 +187,10 @@ fun ProfileScreen(rootNavController: NavController) {
                             } else {
                                 scope.launch {
                                     preferencesManager.setOfflineMode(checked)
+                                    // If switching from offline to online, sync scores immediately
+                                    if (isOfflineMode && !checked && currentUser != null) {
+                                        quizRepository.syncScoresForUser(currentUser.uid)
+                                    }
                                 }
                             }
                         }

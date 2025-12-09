@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,6 +34,7 @@ import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(navController: NavController) {
@@ -43,6 +45,7 @@ fun SplashScreen(navController: NavController) {
     val preferencesManager = remember { UserPreferencesManager(context) }
     val db = remember { AppDatabase.getDatabase(context) }
     val quizRepository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = true) {
         // Fade in animation
@@ -79,12 +82,15 @@ fun SplashScreen(navController: NavController) {
                         val prevUid = preferencesManager.previousUserUidFlow.first()
                         if (prevUid != null && prevUid == currentUser.uid) {
                             // Same account as before: merge scores (keep higher)
-                            quizRepository.syncScoresForUser(currentUser.uid)
+                            // Run sync in background so UI is not blocked
+                            scope.launch { quizRepository.syncScoresForUser(currentUser.uid) }
                         } else {
                             // Different or no previous account: clear local scores then sync remote
-                            quizRepository.clearLocalScores()
-                            preferencesManager.setPreviousUser(currentUser.uid, currentUser.email)
-                            quizRepository.syncScoresForUser(currentUser.uid)
+                            scope.launch {
+                                quizRepository.clearLocalScores()
+                                preferencesManager.setPreviousUser(currentUser.uid, currentUser.email)
+                                quizRepository.syncScoresForUser(currentUser.uid)
+                            }
                         }
                     } catch (e: Exception) {
                         // swallow and continue to navigation
