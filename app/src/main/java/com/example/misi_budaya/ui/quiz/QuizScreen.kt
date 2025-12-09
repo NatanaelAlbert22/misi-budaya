@@ -116,7 +116,7 @@ fun QuizScreen(navController: NavController) {
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(quizPacks) { pack ->
-                        QuizPackItem(pack = pack, onClick = { presenter.onPaketClicked(pack) })
+                        QuizPackItem(pack = pack, onClick = { navController.navigate("quiz_description/${pack.name}") })
                     }
                 }
             }

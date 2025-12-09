@@ -28,6 +28,7 @@ import com.example.misi_budaya.ui.home.HomeScreen
 import com.example.misi_budaya.ui.leaderboard.LeaderboardScreen
 import com.example.misi_budaya.ui.profile.ProfileScreen
 import com.example.misi_budaya.ui.quiz.QuestionScreen
+import com.example.misi_budaya.ui.quiz.QuizDescriptionScreen
 import com.example.misi_budaya.ui.quiz.QuizScreen
 import com.example.misi_budaya.ui.quiz.ResultScreen
 
@@ -99,6 +100,12 @@ fun MainScreen(
                 )
             }
             composable("quiz_screen") { QuizScreen(navController = navController) }
+            composable(
+                route = "quiz_description/{quizPackId}",
+                arguments = listOf(navArgument("quizPackId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                QuizDescriptionScreen(navController = navController, quizPackId = backStackEntry.arguments?.getString("quizPackId"))
+            }
             composable("leaderboard_screen") { LeaderboardScreen() }
             composable("profile_screen") { ProfileScreen(rootNavController = rootNavController) }
 

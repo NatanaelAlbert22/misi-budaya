@@ -402,8 +402,8 @@ fun HomeScreen(
                     QuizCategoryCard(
                         category = category,
                         onClick = {
-                            // Navigate ke soal dengan kategori ID
-                            navController.navigate("question_screen/${category.categoryId}")
+                            // Navigate to description screen first
+                            navController.navigate("quiz_description/${category.categoryId}")
                         }
                     )
                 }

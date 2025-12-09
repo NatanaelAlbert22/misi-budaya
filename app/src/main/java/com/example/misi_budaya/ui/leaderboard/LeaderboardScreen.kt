@@ -32,8 +32,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.misi_budaya.data.local.AppDatabase
+import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.data.model.UserProfile
 import com.example.misi_budaya.data.repository.QuizRepository
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -45,6 +47,7 @@ fun LeaderboardScreen() {
 
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
+    val preferencesManager = remember { UserPreferencesManager(context) }
     val repository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
     val scope = rememberCoroutineScope()
     val presenter = remember { LeaderboardPresenter(repository, scope) }
@@ -99,17 +102,23 @@ fun LeaderboardScreen() {
             Text("Leaderboard", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoading) {
-                CircularProgressIndicator()
-            } else if (errorMessage != null) {
-                Text(text = errorMessage!!)
-            } else if (leaderboard.isEmpty()) {
-                Text("Papan peringkat masih kosong.")
+            val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
+
+            if (isOfflineMode) {
+                Text("Mode offline aktif — silakan beralih ke mode online untuk melihat leaderboard.")
             } else {
-                leaderboard.forEachIndexed { index, user ->
-                    LeaderboardItem(rank = index + 1, user = user)
-                    if (index < leaderboard.size - 1) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else if (errorMessage != null) {
+                    Text(text = errorMessage!!)
+                } else if (leaderboard.isEmpty()) {
+                    Text("Papan peringkat masih kosong.")
+                } else {
+                    leaderboard.forEachIndexed { index, user ->
+                        LeaderboardItem(rank = index + 1, user = user)
+                        if (index < leaderboard.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }

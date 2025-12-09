@@ -152,7 +152,16 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
 
                 if (snapshot.exists()) {
                     // Document exists, so UPDATE it
-                    val oldQuizScores = snapshot.get("quizScores") as? Map<String, Long> ?: emptyMap()
+                    val raw = snapshot.get("quizScores") as? Map<*, *> ?: emptyMap<Any, Any?>()
+                    val oldQuizScores: Map<String, Long> = raw.entries.associate { (k, v) ->
+                        val key = k.toString()
+                        val value = when (v) {
+                            is Number -> v.toLong()
+                            is String -> v.toLongOrNull() ?: 0L
+                            else -> 0L
+                        }
+                        key to value
+                    }
                     val oldTotalScore = snapshot.getLong("totalScore") ?: 0L
                     val oldScoreForThisQuiz = oldQuizScores[quizName] ?: 0L
 
@@ -178,6 +187,7 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             }.await()
         } catch (e: Exception) {
             // For now, we let it fail silently so it doesn't crash the app
+            android.util.Log.e("QuizRepository", "updateUserScoresInFirestore failed", e)
         }
     }
 
@@ -189,8 +199,16 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
         return try {
             val doc = usersCollection.document(uid).get().await()
             if (doc.exists()) {
-                val quizScores = doc.get("quizScores") as? Map<String, Long>
-                quizScores ?: emptyMap()
+                val raw = doc.get("quizScores") as? Map<*, *> ?: emptyMap<Any, Any?>()
+                raw.entries.associate { (k, v) ->
+                    val key = k.toString()
+                    val value = when (v) {
+                        is Number -> v.toLong()
+                        is String -> v.toLongOrNull() ?: 0L
+                        else -> 0L
+                    }
+                    key to value
+                }
             } else {
                 emptyMap()
             }
@@ -262,6 +280,17 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             }
         } catch (e: Exception) {
             android.util.Log.e("QuizRepository", "Error during syncScoresForUser", e)
+        }
+    }
+
+    suspend fun getPaketByName(namaPaket: String): Paket? {
+        return try {
+            val query = paketCollection.whereEqualTo("NamaPaket", namaPaket).limit(1).get().await()
+            val doc = query.documents.firstOrNull()
+            doc?.toObject(Paket::class.java)?.apply { id = doc.id }
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Failed to fetch Paket by name", e)
+            null
         }
     }
 }
