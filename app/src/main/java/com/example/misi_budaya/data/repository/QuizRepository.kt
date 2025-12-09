@@ -180,4 +180,88 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             // For now, we let it fail silently so it doesn't crash the app
         }
     }
+
+    // --- New: User score sync utilities ---
+    /**
+     * Fetch quizScores map for a user from Firestore (returns empty map on failure)
+     */
+    suspend fun getUserQuizScores(uid: String): Map<String, Long> {
+        return try {
+            val doc = usersCollection.document(uid).get().await()
+            if (doc.exists()) {
+                val quizScores = doc.get("quizScores") as? Map<String, Long>
+                quizScores ?: emptyMap()
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Failed to fetch user quizScores", e)
+            emptyMap()
+        }
+    }
+
+    /**
+     * Clear all local quiz package scores in Room (used when offline session not associated with account)
+     */
+    suspend fun clearLocalScores() {
+        try {
+            quizPackageDao.clearQuizPackages()
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Failed to clear local scores", e)
+        }
+    }
+
+    /**
+     * Sync scores between Firestore and Room for given user uid.
+     * Strategy: for each quiz in Firestore or Room, keep the higher score in both places.
+     */
+    suspend fun syncScoresForUser(uid: String) {
+        try {
+            val remoteScores = getUserQuizScores(uid).toMutableMap()
+
+            // pull all local packages
+            val localPackages = quizPackageDao.getAllQuizPackagesOnce()
+
+            // Merge keys
+            val allKeys = (remoteScores.keys + localPackages.map { it.name }).toSet()
+
+            for (quizName in allKeys) {
+                val localPkg = localPackages.find { it.name == quizName }
+                val localScore = localPkg?.score ?: 0
+                val remoteScore = (remoteScores[quizName] ?: 0L).toInt()
+
+                val winnerScore = maxOf(localScore, remoteScore)
+
+                // update local
+                if (localPkg != null) {
+                    val updatedPkg = localPkg.copy(score = winnerScore, isCompleted = winnerScore > 0)
+                    quizPackageDao.updateQuizPackage(updatedPkg)
+                } else {
+                    // insert new package to local
+                    val newPkg = QuizPackage(name = quizName, description = "", score = winnerScore, isCompleted = winnerScore > 0)
+                    quizPackageDao.insertAll(newPkg)
+                }
+
+                // update remote if needed
+                val remoteScoreLong = remoteScores[quizName] ?: 0L
+                if (winnerScore.toLong() > remoteScoreLong) {
+                    // write to firestore user document
+                    try {
+                        val userRef = usersCollection.document(uid)
+                        userRef.update("quizScores.$quizName", winnerScore.toLong()).await()
+                        // adjust totalScore as naive sum difference (for safety, we can recalc totalScore server-side)
+                        val doc = userRef.get().await()
+                        val oldTotal = doc.getLong("totalScore") ?: 0L
+                        val oldForQuiz = remoteScoreLong
+                        val newTotal = oldTotal + (winnerScore.toLong() - oldForQuiz)
+                        userRef.update("totalScore", newTotal).await()
+                    } catch (e: Exception) {
+                        android.util.Log.e("QuizRepository", "Failed to update remote score for $quizName", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Error during syncScoresForUser", e)
+        }
+    }
 }

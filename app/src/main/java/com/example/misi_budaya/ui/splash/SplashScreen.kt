@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
 import com.example.misi_budaya.data.local.UserPreferencesManager
+import com.example.misi_budaya.data.local.AppDatabase
+import com.example.misi_budaya.data.repository.QuizRepository
 import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
@@ -40,6 +41,8 @@ fun SplashScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val networkMonitor = remember { NetworkMonitor(context) }
     val preferencesManager = remember { UserPreferencesManager(context) }
+    val db = remember { AppDatabase.getDatabase(context) }
+    val quizRepository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
 
     LaunchedEffect(key1 = true) {
         // Fade in animation
@@ -53,7 +56,6 @@ fun SplashScreen(navController: NavController) {
         
         // Cek status koneksi internet
         val isOnline = networkMonitor.isOnline()
-        val isOfflineMode = preferencesManager.isOfflineModeFlow.first()
         val currentUser = auth.currentUser
         
         when {
@@ -72,63 +74,78 @@ fun SplashScreen(navController: NavController) {
                 preferencesManager.setOfflineMode(false)
                 
                 if (currentUser != null) {
-                    // User sudah login -> ke home
-                    navController.navigate("home") {
-                        popUpTo("splash") { inclusive = true }
+                    // Account-aware sync logic:
+                    try {
+                        val prevUid = preferencesManager.previousUserUidFlow.first()
+                        if (prevUid != null && prevUid == currentUser.uid) {
+                            // Same account as before: merge scores (keep higher)
+                            quizRepository.syncScoresForUser(currentUser.uid)
+                        } else {
+                            // Different or no previous account: clear local scores then sync remote
+                            quizRepository.clearLocalScores()
+                            preferencesManager.setPreviousUser(currentUser.uid, currentUser.email)
+                            quizRepository.syncScoresForUser(currentUser.uid)
+                        }
+                    } catch (e: Exception) {
+                        // swallow and continue to navigation
                     }
-                } else {
-                    // User belum login -> ke login
-                    navController.navigate("login") {
-                        popUpTo("splash") { inclusive = true }
-                    }
-                }
-            }
-        }
-    }
+                     // User sudah login -> ke home
+                     navController.navigate("home") {
+                         popUpTo("splash") { inclusive = true }
+                     }
+                 } else {
+                     // User belum login -> ke login
+                     navController.navigate("login") {
+                         popUpTo("splash") { inclusive = true }
+                     }
+                 }
+             }
+         }
+     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFFFF8E1)), // Warna krem seperti di app
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.alpha(alpha.value)
-        ) {
-            // Logo
-            Image(
-                painter = painterResource(id = R.drawable.logo),
-                contentDescription = "Logo Misi Budaya",
-                modifier = Modifier.size(120.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // App Name
-            Text(
-                text = "Misi Budaya",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2E2E2E)
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Tagline
-            Text(
-                text = "Jelajahi Warisan Indonesia",
-                fontSize = 16.sp,
-                color = Color(0xFF757575)
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // Loading indicator
-            CircularProgressIndicator(
-                color = Color(0xFF6B8E23),
-                modifier = Modifier.size(40.dp)
-            )
-        }
-    }
-}
+     Box(
+         modifier = Modifier
+             .fillMaxSize()
+             .background(Color(0xFFFFF8E1)), // Warna krem seperti di app
+         contentAlignment = Alignment.Center
+     ) {
+         Column(
+             horizontalAlignment = Alignment.CenterHorizontally,
+             modifier = Modifier.alpha(alpha.value)
+         ) {
+             // Logo
+             Image(
+                 painter = painterResource(id = R.drawable.logo),
+                 contentDescription = "Logo Misi Budaya",
+                 modifier = Modifier.size(120.dp)
+             )
+
+             Spacer(modifier = Modifier.height(24.dp))
+
+             // App Name
+             Text(
+                 text = "Misi Budaya",
+                 fontSize = 32.sp,
+                 fontWeight = FontWeight.Bold,
+                 color = Color(0xFF2E2E2E)
+             )
+
+             Spacer(modifier = Modifier.height(8.dp))
+
+             // Tagline
+             Text(
+                 text = "Jelajahi Warisan Indonesia",
+                 fontSize = 16.sp,
+                 color = Color(0xFF757575)
+             )
+
+             Spacer(modifier = Modifier.height(48.dp))
+
+             // Loading indicator
+             CircularProgressIndicator(
+                 color = Color(0xFF6B8E23),
+                 modifier = Modifier.size(40.dp)
+             )
+         }
+     }
+ }

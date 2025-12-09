@@ -50,9 +50,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.local.UserPreferencesManager
-import com.example.misi_budaya.data.repository.UserRepository
-import com.example.misi_budaya.ui.components.OnlineModeDialog
 import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -62,8 +61,10 @@ fun ProfileScreen(rootNavController: NavController) {
     val context = LocalContext.current
     val currentUser = remember { FirebaseAuth.getInstance().currentUser }
     val preferencesManager = remember { UserPreferencesManager(context) }
+    val db = remember { AppDatabase.getDatabase(context) }
+    val quizRepository = remember { com.example.misi_budaya.data.repository.QuizRepository(db.quizPackageDao(), db.questionDao()) }
     val networkMonitor = remember { NetworkMonitor(context) }
-    val userRepository = remember { UserRepository() }
+    val userRepository = remember { com.example.misi_budaya.data.repository.UserRepository() }
     val scope = rememberCoroutineScope()
     
     val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
@@ -350,17 +351,22 @@ fun ProfileScreen(rootNavController: NavController) {
             // Logout Button
             Button(
                 onClick = {
-                    FirebaseAuth.getInstance().signOut()
-                    // Biarkan mode tetap sesuai preference user
-                    // SplashScreen akan handle auto online jika ada internet
-                    rootNavController.navigate("login") {
-                        popUpTo(rootNavController.graph.startDestinationId) { inclusive = true }
+                    scope.launch {
+                        // Clear previous user so next offline session is treated as anonymous
+                        preferencesManager.clearPreviousUser()
+                        // Clear local scores because after logout offline should not retain account scores
+                        quizRepository.clearLocalScores()
+                        FirebaseAuth.getInstance().signOut()
+                        // Navigate to login on main thread
+                        rootNavController.navigate("login") {
+                            popUpTo(rootNavController.graph.startDestinationId) { inclusive = true }
+                        }
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Logout")
-            }
+                 },
+                 modifier = Modifier.fillMaxWidth()
+             ) {
+                 Text("Logout")
+             }
         } else {
             Text("Not logged in")
             Spacer(modifier = Modifier.height(16.dp))
