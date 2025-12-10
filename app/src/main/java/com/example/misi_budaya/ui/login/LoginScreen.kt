@@ -42,6 +42,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -68,6 +70,10 @@ fun LoginScreen(navController: NavController) {
 
     val context = LocalContext.current
     val presenter = remember { LoginPresenter(context) }
+    val preferencesManager = remember { com.example.misi_budaya.data.local.UserPreferencesManager(context) }
+    val db = remember { com.example.misi_budaya.data.local.AppDatabase.getDatabase(context) }
+    val repository = remember { com.example.misi_budaya.data.repository.QuizRepository(db.quizPackageDao(), db.questionDao()) }
+    val scope = rememberCoroutineScope()
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -89,8 +95,27 @@ fun LoginScreen(navController: NavController) {
             }
 
             override fun navigateToHome() {
-                navController.navigate("home") {
-                    popUpTo("login") { inclusive = true }
+                scope.launch {
+                    try {
+                        // Ensure we are in online mode and remember the previous user so offline sessions are account-bound
+                        preferencesManager.setOfflineMode(false)
+                        // Mark prompt seen so Home won't re-show the online prompt immediately
+                        preferencesManager.markOnlinePromptSeen()
+                        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                        if (user != null) {
+                            preferencesManager.setPreviousUser(user.uid, user.email)
+                            // Wait for auth guard to clear (should already be false) then sync scores
+                            val ok = com.example.misi_budaya.util.NetworkActivityGuard.waitForAuthToFinish()
+                            if (ok) {
+                                try { repository.syncScoresForUser(user.uid) } catch (_: Exception) {}
+                                try { com.example.misi_budaya.util.AppEvents.emitLeaderboardRefresh() } catch (_: Exception) {}
+                            }
+                        }
+                    } catch (_: Exception) {}
+                    // Navigate to home regardless
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
                 }
             }
 

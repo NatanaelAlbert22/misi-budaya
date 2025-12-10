@@ -17,5 +17,6 @@ interface QuizContract {
         fun onDetach()
         fun loadQuizPacks()
         fun onPaketClicked(paket: QuizPackage)
+        fun onRefresh() // Added: allow explicit user-triggered refresh (pull-to-refresh)
     }
 }

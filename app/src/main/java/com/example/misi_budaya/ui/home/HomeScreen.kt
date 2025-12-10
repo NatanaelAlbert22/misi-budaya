@@ -66,6 +66,7 @@ import com.example.misi_budaya.data.repository.UserRepository
 import com.example.misi_budaya.ui.components.OnlineModeDialog
 import com.example.misi_budaya.util.NetworkMonitor
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class QuizCategory(
@@ -99,7 +100,13 @@ fun HomeScreen(
     // Detect ketika online dan masih dalam offline mode
     LaunchedEffect(isOnline, isOfflineMode, hasSeenPrompt) {
         if (isOnline && isOfflineMode && !hasSeenPrompt) {
-            showOnlineModeDialog = true
+            // wait a short time to allow preference writes (e.g. markOnlinePromptSeen after login)
+            // to propagate before we show the dialog. This avoids a race where the dialog
+            // appears immediately after login even though we just marked the prompt as seen.
+            delay(1200L)
+            if (isOnline && isOfflineMode && !hasSeenPrompt) {
+                showOnlineModeDialog = true
+            }
         }
     }
     
@@ -402,8 +409,8 @@ fun HomeScreen(
                     QuizCategoryCard(
                         category = category,
                         onClick = {
-                            // Navigate ke soal dengan kategori ID
-                            navController.navigate("question_screen/${category.categoryId}")
+                            // Navigate to description screen first
+                            navController.navigate("quiz_description/${category.categoryId}")
                         }
                     )
                 }
@@ -435,12 +442,24 @@ fun HomeScreen(
                     val currentUser = auth.currentUser
                     if (currentUser != null) {
                         // Sudah login, langsung switch ke online
-                        preferencesManager.setOfflineMode(false)
+                        val ok = com.example.misi_budaya.util.NetworkUtil.waitForInternet()
+                        if (ok) {
+                            preferencesManager.setOfflineMode(false)
+                        } else {
+                            // Inform user that connection not yet stable
+                            android.util.Log.w("HomeScreen", "User requested online but internet not reachable")
+                            // keep offline; optionally show a toast
+                        }
                     } else {
                         // Belum login, arahkan ke login
                         // Tapi tetap di home dulu, nanti user bisa login dari profile
                         // Atau bisa langsung navigate ke login jika mau
-                        preferencesManager.setOfflineMode(false)
+                        val ok = com.example.misi_budaya.util.NetworkUtil.waitForInternet()
+                        if (ok) {
+                            preferencesManager.setOfflineMode(false)
+                        } else {
+                            android.util.Log.w("HomeScreen", "User requested online but internet not reachable")
+                        }
                     }
                 }
             }

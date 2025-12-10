@@ -16,8 +16,12 @@ data class Paket(
 
     @get:PropertyName("Secret")
     @set:PropertyName("Secret")
-    var isSecret: Boolean = false
+    var isSecret: Boolean = false,
+
+    @get:PropertyName("Deskripsi")
+    @set:PropertyName("Deskripsi")
+    var deskripsi: String = "" // New field for description from Firestore
 ) {
     // Konstruktor kosong diperlukan oleh Firebase untuk deserialisasi data
-    constructor() : this("", "", false)
+    constructor() : this("", "", false, "")
 }

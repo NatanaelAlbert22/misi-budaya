@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,10 +16,12 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
 class UserPreferencesManager(private val context: Context) {
-    
+
     companion object {
         private val IS_OFFLINE_MODE = booleanPreferencesKey("is_offline_mode")
         private val HAS_SEEN_ONLINE_PROMPT = booleanPreferencesKey("has_seen_online_prompt")
+        private val PREVIOUS_USER_UID = stringPreferencesKey("previous_user_uid")
+        private val PREVIOUS_USER_EMAIL = stringPreferencesKey("previous_user_email")
     }
 
     /**
@@ -35,6 +38,22 @@ class UserPreferencesManager(private val context: Context) {
     val hasSeenOnlinePromptFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[HAS_SEEN_ONLINE_PROMPT] ?: false
+        }
+
+    /**
+     * Flow untuk observe previous user uid
+     */
+    val previousUserUidFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PREVIOUS_USER_UID]
+        }
+
+    /**
+     * Flow untuk observe previous user email
+     */
+    val previousUserEmailFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PREVIOUS_USER_EMAIL]
         }
 
     /**
@@ -66,13 +85,24 @@ class UserPreferencesManager(private val context: Context) {
     }
 
     /**
-     * Get current offline mode status (suspend function untuk one-time read)
+     * Set previous user info (uid + email) ketika user online
      */
-    suspend fun isOfflineMode(): Boolean {
-        var isOffline = false
-        context.dataStore.data.map { preferences ->
-            isOffline = preferences[IS_OFFLINE_MODE] ?: false
+    suspend fun setPreviousUser(uid: String?, email: String?) {
+        context.dataStore.edit { preferences ->
+            if (uid != null) preferences[PREVIOUS_USER_UID] = uid else preferences.remove(PREVIOUS_USER_UID)
+            if (email != null) preferences[PREVIOUS_USER_EMAIL] = email else preferences.remove(PREVIOUS_USER_EMAIL)
         }
-        return isOffline
     }
+
+    /**
+     * Clear stored previous user info (on logout)
+     */
+    suspend fun clearPreviousUser() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(PREVIOUS_USER_UID)
+            preferences.remove(PREVIOUS_USER_EMAIL)
+        }
+    }
+
+    // We rely on isOfflineModeFlow for observing offline status; no one-shot suspend helper needed.
 }

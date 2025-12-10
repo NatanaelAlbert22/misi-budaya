@@ -27,4 +27,7 @@ interface QuizPackageDao {
 
     @Query("DELETE FROM quiz_packages")
     suspend fun clearQuizPackages()
+
+    @Query("SELECT * FROM quiz_packages")
+    suspend fun getAllQuizPackagesOnce(): List<QuizPackage>
 }
