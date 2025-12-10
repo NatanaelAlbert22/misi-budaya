@@ -83,13 +83,30 @@ fun SplashScreen(navController: NavController) {
                         if (prevUid != null && prevUid == currentUser.uid) {
                             // Same account as before: merge scores (keep higher)
                             // Run sync in background so UI is not blocked
-                            scope.launch { quizRepository.syncScoresForUser(currentUser.uid) }
+                            scope.launch {
+                                try {
+                                    val ok = com.example.misi_budaya.util.NetworkActivityGuard.waitForAuthToFinish()
+                                    if (ok) quizRepository.syncScoresForUser(currentUser.uid)
+                                    else android.util.Log.w("SplashScreen", "Skipping sync because auth still in progress or timed out")
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SplashScreen", "Background sync failed", e)
+                                }
+                            }
                         } else {
                             // Different or no previous account: clear local scores then sync remote
                             scope.launch {
-                                quizRepository.clearLocalScores()
-                                preferencesManager.setPreviousUser(currentUser.uid, currentUser.email)
-                                quizRepository.syncScoresForUser(currentUser.uid)
+                                try {
+                                    val ok = com.example.misi_budaya.util.NetworkActivityGuard.waitForAuthToFinish()
+                                    if (ok) {
+                                        quizRepository.clearLocalScores()
+                                        preferencesManager.setPreviousUser(currentUser.uid, currentUser.email)
+                                        quizRepository.syncScoresForUser(currentUser.uid)
+                                    } else {
+                                        android.util.Log.w("SplashScreen", "Skipping initial sync due to auth in progress")
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SplashScreen", "Failed during initial sync", e)
+                                }
                             }
                         }
                     } catch (e: Exception) {

@@ -54,8 +54,12 @@ fun LeaderboardScreen() {
     val presenter = remember { LeaderboardPresenter(repository, scope) }
     // Subscribe to global events: refresh leaderboard on demand
     LaunchedEffect(Unit) {
-        com.example.misi_budaya.util.AppEvents.leaderboardRefresh.collect {
-            presenter.onRefresh()
+        try {
+            com.example.misi_budaya.util.AppEvents.leaderboardRefresh.collect {
+                try { presenter.onRefresh() } catch (e: Exception) { android.util.Log.e("LeaderboardScreen","Presenter refresh failed", e) }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("LeaderboardScreen", "Failed to collect leaderboardRefresh events", e)
         }
     }
 

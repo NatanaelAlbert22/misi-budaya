@@ -78,7 +78,9 @@ fun MainScreen(
             if (currentUser != null) {
                 scope.launch {
                     try {
-                        repository.syncScoresForUser(currentUser.uid)
+                        val ok = com.example.misi_budaya.util.NetworkActivityGuard.waitForAuthToFinish()
+                        if (ok) repository.syncScoresForUser(currentUser.uid)
+                        else android.util.Log.w("MainScreen", "Skipping auto-sync due to auth in progress or timeout")
                     } catch (e: Exception) {
                         android.util.Log.e("MainScreen", "Auto sync failed", e)
                     }

@@ -189,7 +189,13 @@ fun ProfileScreen(rootNavController: NavController) {
                                     preferencesManager.setOfflineMode(checked)
                                     // If switching from offline to online, sync scores immediately
                                     if (isOfflineMode && !checked && currentUser != null) {
-                                        quizRepository.syncScoresForUser(currentUser.uid)
+                                        try {
+                                            val ok = com.example.misi_budaya.util.NetworkActivityGuard.waitForAuthToFinish()
+                                            if (ok) quizRepository.syncScoresForUser(currentUser.uid)
+                                            else android.util.Log.w("ProfileScreen", "Skipping sync due to auth in progress")
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("ProfileScreen", "Sync failed", e)
+                                        }
                                     }
                                 }
                             }
