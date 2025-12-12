@@ -93,7 +93,7 @@ fun MainScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     
     // Daftar route yang tidak menampilkan bottom bar
-    val routesWithoutBottomBar = listOf("question_screen/{quizPackId}", "result_screen/{score}")
+    val routesWithoutBottomBar = listOf("question_screen/{quizPackId}", "result_screen/{score}/{quizPackId}")
     val shouldShowBottomBar = routesWithoutBottomBar.none { route ->
         currentRoute?.startsWith(route.split("/").first()) == true
     }
@@ -157,12 +157,19 @@ fun MainScreen(
                 )
             }
             composable(
-                route = "result_screen/{score}",
-                arguments = listOf(navArgument("score") { type = NavType.IntType })
+                route = "result_screen/{score}/{quizPackId}",
+                arguments = listOf(
+                    navArgument("score") { type = NavType.IntType },
+                    navArgument("quizPackId") { 
+                        type = NavType.StringType
+                        nullable = true
+                    }
+                )
             ) { backStackEntry ->
                 ResultScreen(
                     navController = navController,
-                    score = backStackEntry.arguments?.getInt("score")
+                    score = backStackEntry.arguments?.getInt("score"),
+                    quizPackId = backStackEntry.arguments?.getString("quizPackId")
                 )
             }
         }
