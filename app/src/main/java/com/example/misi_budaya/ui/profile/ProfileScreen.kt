@@ -1,7 +1,9 @@
 package com.example.misi_budaya.ui.profile
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,26 +12,39 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,12 +58,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.local.UserPreferencesManager
@@ -120,42 +139,154 @@ fun ProfileScreen(rootNavController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+            .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text("Profile", style = MaterialTheme.typography.headlineMedium)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Card untuk status koneksi dan mode
+        // Header Profile dengan Avatar
         Card(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Pengaturan Koneksi",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                // Avatar dengan gradient border
+                Box(
+                    modifier = Modifier.size(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFF64B5F6),
+                                        Color(0xFF81C784)
+                                    )
+                                )
+                            ),
+                        shape = CircleShape
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(4.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(92.dp),
+                                shape = CircleShape,
+                                color = Color(0xFFE3F2FD)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Profile",
+                                    tint = Color(0xFF64B5F6),
+                                    modifier = Modifier
+                                        .padding(20.dp)
+                                        .size(52.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (currentUser != null) {
+                    if (isLoadingProfile) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFF64B5F6)
+                        )
+                    } else {
+                        Text(
+                            text = currentUsername.ifEmpty { "User" },
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E2E2E)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = userEmail,
+                            fontSize = 14.sp,
+                            color = Color(0xFF757575)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "Guest User",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2E2E2E)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Not logged in",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Card untuk status koneksi dan mode
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isOnline) Color(0xFF4CAF50).copy(alpha = 0.15f) 
+                               else Color(0xFFE57373).copy(alpha = 0.15f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isOnline) Icons.Default.Wifi else Icons.Default.WifiOff,
+                                contentDescription = null,
+                                tint = if (isOnline) Color(0xFF4CAF50) else Color(0xFFE57373),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Status Koneksi",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (isOnline) "Online" else "Offline",
+                            fontSize = 14.sp,
+                            color = if (isOnline) Color(0xFF4CAF50) else Color(0xFFE57373),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Status koneksi
-                Text(
-                    text = "Status: ${if (isOnline) "Online ✓" else "Offline ✗"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isOnline) MaterialTheme.colorScheme.primary 
-                           else MaterialTheme.colorScheme.error
-                )
-                
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Switch offline mode
@@ -167,12 +298,14 @@ fun ProfileScreen(rootNavController: NavController) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Mode Offline",
-                            style = MaterialTheme.typography.bodyLarge
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isOfflineMode) "Aplikasi berjalan offline" 
                                   else "Aplikasi berjalan online",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -199,7 +332,13 @@ fun ProfileScreen(rootNavController: NavController) {
                                     }
                                 }
                             }
-                        }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.surface,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.surface,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
                     )
                 }
             }
@@ -211,152 +350,168 @@ fun ProfileScreen(rootNavController: NavController) {
             // User Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(20.dp)
                 ) {
                     Text(
                         text = "Informasi Akun",
-                        style = MaterialTheme.typography.titleMedium
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     
                     if (isLoadingProfile) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    } else {
-                        // Username
-                        Row(
+                        Box(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            contentAlignment = Alignment.Center
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Username",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = currentUsername.ifEmpty { "Belum diatur" },
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                            
-                            IconButton(
-                                onClick = { showEditUsernameDialog = true },
-                                enabled = !isOfflineMode
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Username"
-                                )
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        // Email
-                        Column {
-                            Text(
-                                text = "Email",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = userEmail,
-                                style = MaterialTheme.typography.bodyLarge
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(40.dp),
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
+                    } else {
+                        // Username Row
+                        ProfileInfoRow(
+                            icon = Icons.Default.Person,
+                            iconColor = Color(0xFF64B5F6),
+                            label = "Username",
+                            value = currentUsername.ifEmpty { "Belum diatur" },
+                            onEdit = if (!isOfflineMode) ({ showEditUsernameDialog = true }) else null
+                        )
                         
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
                         
-                        // Login Method
-                        Column {
-                            Text(
-                                text = "Metode Login",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isGoogleUser) 
-                                        Icons.Default.AccountCircle 
-                                    else 
-                                        Icons.Default.Email,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = if (isGoogleUser) "Google Account" else "Email & Password",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        }
+                        // Email Row
+                        ProfileInfoRow(
+                            icon = Icons.Default.Email,
+                            iconColor = Color(0xFF81C784),
+                            label = "Email",
+                            value = userEmail,
+                            onEdit = null
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Login Method Row
+                        ProfileInfoRow(
+                            icon = if (isGoogleUser) Icons.Default.AccountCircle else Icons.Default.CheckCircle,
+                            iconColor = if (isGoogleUser) Color(0xFFE57373) else Color(0xFFBA68C8),
+                            label = "Metode Login",
+                            value = if (isGoogleUser) "Google Account" else "Email & Password",
+                            onEdit = null
+                        )
                     }
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Info text jika offline
+            // Info cards
             if (isOfflineMode) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = Color(0xFFFFF9C4)
                     )
                 ) {
-                    Text(
-                        text = "⚠️ Mode Offline: Edit username dan ubah password tidak tersedia. Aktifkan mode online untuk menggunakan fitur ini.",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            // Info text jika Google user
-            if (isGoogleUser) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "ℹ️ Akun Google",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
+                            text = "⚠️",
+                            fontSize = 24.sp
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Anda login dengan Google. Ubah password tidak tersedia. Untuk mengubah password, gunakan pengaturan akun Google Anda.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = "Mode Offline: Edit username dan ubah password tidak tersedia. Aktifkan mode online untuk menggunakan fitur ini.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF616161),
+                            lineHeight = 18.sp
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
-            // Change Password Button (disabled untuk Google users)
-            OutlinedButton(
-                onClick = { showChangePasswordDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isOfflineMode && !isGoogleUser
-            ) {
-                Text(if (isGoogleUser) "Ubah Password (Tidak tersedia)" else "Ubah Password")
+            if (isGoogleUser) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE3F2FD)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "ℹ️",
+                            fontSize = 24.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Akun Google",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E2E2E)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Anda login dengan Google. Untuk mengubah password, gunakan pengaturan akun Google Anda.",
+                                fontSize = 13.sp,
+                                color = Color(0xFF616161),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            // Action Buttons
+            if (!isGoogleUser) {
+                OutlinedButton(
+                    onClick = { showChangePasswordDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    enabled = !isOfflineMode,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color(0xFF64B5F6)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Ubah Password",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             
             // Logout Button
             Button(
@@ -372,20 +527,59 @@ fun ProfileScreen(rootNavController: NavController) {
                             popUpTo(rootNavController.graph.startDestinationId) { inclusive = true }
                         }
                     }
-                 },
-                 modifier = Modifier.fillMaxWidth()
-             ) {
-                 Text("Logout")
-             }
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFE57373)
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Logout",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         } else {
-            Text("Not logged in")
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Login untuk menggunakan mode online dan sinkronisasi data",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Not logged in card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+            ) {
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "👤",
+                        fontSize = 48.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Belum Login",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2E2E2E)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Login untuk menggunakan mode online dan sinkronisasi data",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
         }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
     
     // Dialog ketika tidak ada koneksi
@@ -484,6 +678,67 @@ fun ProfileScreen(rootNavController: NavController) {
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ProfileInfoRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    label: String,
+    value: String,
+    onEdit: (() -> Unit)?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = iconColor.copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = label,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = value,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        
+        onEdit?.let {
+            IconButton(onClick = it) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
 

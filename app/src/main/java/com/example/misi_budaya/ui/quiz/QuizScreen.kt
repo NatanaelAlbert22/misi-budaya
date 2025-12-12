@@ -1,47 +1,65 @@
 package com.example.misi_budaya.ui.quiz
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalActivity
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -117,51 +135,153 @@ fun QuizScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .pullRefresh(pullRefreshState),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            Row(
+            // Header dengan judul dan download button
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                Text("Pilih Paket Soal", style = MaterialTheme.typography.headlineMedium)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Paket Quiz",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Pilih kategori untuk memulai",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                // Download button
-                IconButton(
-                    onClick = {
-                        if (isOnline) {
-                            showDownloadDialog = true
-                        } else {
-                            showNoConnectionDialog = true
+                    // Download button
+                    Surface(
+                        modifier = Modifier.size(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (isOnline) {
+                                    showDownloadDialog = true
+                                } else {
+                                    showNoConnectionDialog = true
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "Download all questions",
+                                tint = if (isOnline) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = "Download all questions"
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            if (isLoading && quizPacks.isEmpty()) { // Show loading only if there's no data yet
-                CircularProgressIndicator()
+            if (isLoading && quizPacks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(50.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Memuat paket soal...",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else if (errorMessage != null) {
-                Text(text = errorMessage!!)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Oops!",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorMessage!!,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else if (quizPacks.isEmpty()) {
-                Text("Tidak ada paket soal yang tersedia.")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "📚",
+                            fontSize = 48.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Tidak ada paket soal",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Silakan coba lagi nanti",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
                     items(quizPacks) { pack ->
-                        QuizPackItem(pack = pack, onClick = { navController.navigate("quiz_description/${pack.name}") })
+                        QuizPackItem(
+                            pack = pack,
+                            onClick = { navController.navigate("quiz_description/${pack.name}") }
+                        )
                     }
                 }
             }
@@ -174,22 +294,64 @@ fun QuizScreen(navController: NavController) {
         )
     }
 
-    // Download dialog
+    // Download dialog dengan desain modern
     if (showDownloadDialog) {
         AlertDialog(
             onDismissRequest = { if (!isDownloading) showDownloadDialog = false },
-            title = { Text("Download Pertanyaan") },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Surface(
+                        modifier = Modifier.size(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Download Pertanyaan",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
             text = {
-                Column {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     if (isDownloading) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(modifier = Modifier.height(8.dp))
+                        CircularProgressIndicator(
+                            color = Color(0xFF64B5F6),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = downloadMessage ?: "Sedang mendownload pertanyaan...",
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                            fontSize = 14.sp,
+                            color = Color(0xFF757575),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     } else {
-                        Text("Apakah Anda ingin mendownload semua pertanyaan dari paket soal untuk dapat mengerjakan secara offline?")
+                        Text(
+                            "Apakah Anda ingin mendownload semua pertanyaan dari paket soal untuk dapat mengerjakan secara offline?",
+                            fontSize = 14.sp,
+                            color = Color(0xFF616161),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 20.sp
+                        )
                     }
                 }
             },
@@ -213,7 +375,12 @@ fun QuizScreen(navController: NavController) {
                     },
                     enabled = !isDownloading
                 ) {
-                    Text("Download")
+                    Text(
+                        "Download",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (!isDownloading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             dismissButton = {
@@ -221,21 +388,59 @@ fun QuizScreen(navController: NavController) {
                     onClick = { showDownloadDialog = false },
                     enabled = !isDownloading
                 ) {
-                    Text("Batal")
+                    Text(
+                        "Batal",
+                        fontSize = 16.sp,
+                        color = if (!isDownloading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
         )
     }
 
-    // No connection dialog
+    // No connection dialog dengan desain modern
     if (showNoConnectionDialog) {
         AlertDialog(
             onDismissRequest = { showNoConnectionDialog = false },
-            title = { Text("Tidak Ada Koneksi") },
-            text = { Text("Tidak dapat mendownload pertanyaan karena tidak ada koneksi internet.") },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "📡",
+                        fontSize = 48.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Tidak Ada Koneksi",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
+            text = {
+                Text(
+                    "Tidak dapat mendownload pertanyaan karena tidak ada koneksi internet. Pastikan Anda terhubung ke internet dan coba lagi.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { showNoConnectionDialog = false }) {
-                    Text("OK")
+                TextButton(
+                    onClick = { showNoConnectionDialog = false }
+                ) {
+                    Text(
+                        "OK",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         )
@@ -244,15 +449,122 @@ fun QuizScreen(navController: NavController) {
 
 @Composable
 private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
+    // Mapping kategori ke warna dan icon
+    val (categoryColor, categoryIcon) = remember(pack.name) {
+        when (pack.name) {
+            "Pakaian Adat" -> Pair(Color(0xFFE57373), Icons.Default.Home)
+            "Makanan Khas" -> Pair(Color(0xFF64B5F6), Icons.Default.Fastfood)
+            "Geografi" -> Pair(Color(0xFF81C784), Icons.Default.Map)
+            "Kesenian" -> Pair(Color(0xFFBA68C8), Icons.Default.LocalActivity)
+            else -> Pair(Color(0xFF9E9E9E), Icons.Default.Home)
+        }
+    }
+    
+    // Assume total questions = 24 untuk setiap paket
+    val totalQuestions = 24
+    // Hitung progress berdasarkan skor (skor maksimal 100)
+    val progress = if (pack.isCompleted) {
+        (pack.score.toFloat() / 100f).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(pack.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            if (pack.isCompleted) {
-                Text(pack.score.toString(), style = MaterialTheme.typography.headlineSmall)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon kategori dengan background warna
+            Surface(
+                modifier = Modifier.size(64.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = categoryColor.copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = categoryIcon,
+                        contentDescription = pack.name,
+                        tint = categoryColor,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.padding(horizontal = 12.dp))
+
+            // Info paket
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = pack.name,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                if (pack.isCompleted) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Completed",
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                        Text(
+                            text = "Selesai • Skor: ${pack.score}",
+                            fontSize = 14.sp,
+                            color = Color(0xFF4CAF50),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "$totalQuestions pertanyaan",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Progress bar berdasarkan skor
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        categoryColor.copy(alpha = 0.7f),
+                                        categoryColor
+                                    )
+                                )
+                            )
+                    )
+                }
             }
         }
     }
