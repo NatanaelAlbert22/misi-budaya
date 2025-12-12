@@ -139,14 +139,7 @@ fun ProfileScreen(rootNavController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFFFF8E1),
-                        Color.White
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
@@ -155,7 +148,7 @@ fun ProfileScreen(rootNavController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -250,7 +243,7 @@ fun ProfileScreen(rootNavController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -281,7 +274,7 @@ fun ProfileScreen(rootNavController: NavController) {
                             text = "Status Koneksi",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isOnline) "Online" else "Offline",
@@ -293,7 +286,7 @@ fun ProfileScreen(rootNavController: NavController) {
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color(0xFFE8E8E8))
+                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Switch offline mode
@@ -307,13 +300,13 @@ fun ProfileScreen(rootNavController: NavController) {
                             text = "Mode Offline",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isOfflineMode) "Aplikasi berjalan offline" 
                                   else "Aplikasi berjalan online",
                             fontSize = 12.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     
@@ -341,10 +334,10 @@ fun ProfileScreen(rootNavController: NavController) {
                             }
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF64B5F6),
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color(0xFFBDBDBD)
+                            checkedThumbColor = MaterialTheme.colorScheme.surface,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.surface,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -359,7 +352,7 @@ fun ProfileScreen(rootNavController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier
@@ -370,7 +363,7 @@ fun ProfileScreen(rootNavController: NavController) {
                         text = "Informasi Akun",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E2E2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     Spacer(modifier = Modifier.height(20.dp))
@@ -382,7 +375,7 @@ fun ProfileScreen(rootNavController: NavController) {
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(40.dp),
-                                color = Color(0xFF64B5F6)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     } else {
@@ -396,7 +389,7 @@ fun ProfileScreen(rootNavController: NavController) {
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
-                        Divider(color = Color(0xFFE8E8E8))
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         // Email Row
@@ -409,7 +402,7 @@ fun ProfileScreen(rootNavController: NavController) {
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
-                        Divider(color = Color(0xFFE8E8E8))
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         // Login Method Row
@@ -724,14 +717,14 @@ private fun ProfileInfoRow(
                 Text(
                     text = label,
                     fontSize = 12.sp,
-                    color = Color(0xFF757575)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = value,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF2E2E2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -741,7 +734,7 @@ private fun ProfileInfoRow(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Edit",
-                    tint = Color(0xFF64B5F6),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }

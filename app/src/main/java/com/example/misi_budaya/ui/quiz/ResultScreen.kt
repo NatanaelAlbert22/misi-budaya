@@ -67,14 +67,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        categoryColor.copy(alpha = 0.2f),
-                        Color.White
-                    )
-                )
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -114,7 +107,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(
@@ -127,7 +120,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
                         text = "Selamat!",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E2E2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -135,7 +128,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
                     Text(
                         text = "Quiz Selesai",
                         fontSize = 18.sp,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Spacer(modifier = Modifier.height(32.dp))
@@ -157,7 +150,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
                             Text(
                                 text = "Skor Anda",
                                 fontSize = 16.sp,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -181,7 +174,7 @@ fun ResultScreen(navController: NavController, score: Int?, quizPackId: String?)
                     Text(
                         text = message,
                         fontSize = 16.sp,
-                        color = Color(0xFF616161),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }

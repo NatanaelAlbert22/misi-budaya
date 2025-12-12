@@ -136,14 +136,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        categoryColor.copy(alpha = 0.1f),
-                        Color.White
-                    )
-                )
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
@@ -153,7 +146,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
             ) {
                 CircularProgressIndicator(color = categoryColor)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Memuat soal...", color = Color(0xFF757575))
+                Text("Memuat soal...", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else if (errorMessage != null) {
             Card(
@@ -161,7 +154,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                     .fillMaxWidth()
                     .padding(24.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -171,13 +164,13 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                         text = "Oops!",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE57373)
+                        color = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = errorMessage!!,
                         fontSize = 16.sp,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -192,7 +185,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
@@ -209,7 +202,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                                 text = "Pertanyaan $questionNumber dari $totalQuestions",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "${((questionNumber.toFloat() / totalQuestions.toFloat()) * 100).toInt()}%",
@@ -229,7 +222,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp)),
                             color = categoryColor,
-                            trackColor = Color(0xFFE8E8E8)
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     }
                 }
@@ -240,7 +233,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
@@ -252,7 +245,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                             text = currentQuestion!!.questionText,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E2E2E),
+                            color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = 28.sp
                         )
 
@@ -295,7 +288,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                             ),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) categoryColor.copy(alpha = 0.1f) else Color.White
+                            containerColor = if (isSelected) categoryColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
                         ),
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = if (isSelected) 4.dp else 2.dp
@@ -313,7 +306,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                                     .size(24.dp)
                                     .border(
                                         width = 2.dp,
-                                        color = if (isSelected) categoryColor else Color(0xFFBDBDBD),
+                                        color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .background(
@@ -327,7 +320,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                                         modifier = Modifier
                                             .size(12.dp)
                                             .background(
-                                                color = Color.White,
+                                                color = MaterialTheme.colorScheme.surface,
                                                 shape = RoundedCornerShape(6.dp)
                                             )
                                     )
@@ -353,7 +346,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                                 Text(
                                     text = option.teks,
                                     fontSize = 16.sp,
-                                    color = if (isSelected) Color(0xFF2E2E2E) else Color(0xFF616161),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -378,7 +371,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = categoryColor,
-                        disabledContainerColor = Color(0xFFE0E0E0)
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 4.dp,
@@ -390,7 +383,7 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
                         text = buttonText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.surface
                     )
                 }
 

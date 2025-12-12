@@ -79,14 +79,7 @@ fun QuizDescriptionScreen(navController: NavController, quizPackId: String?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        categoryInfo.first.copy(alpha = 0.15f),
-                        Color.White
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -104,14 +97,14 @@ fun QuizDescriptionScreen(navController: NavController, quizPackId: String?) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Kembali",
-                        tint = Color(0xFF2E2E2E)
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
                     text = "Detail Quiz",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E2E2E),
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -124,7 +117,7 @@ fun QuizDescriptionScreen(navController: NavController, quizPackId: String?) {
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(
@@ -158,7 +151,7 @@ fun QuizDescriptionScreen(navController: NavController, quizPackId: String?) {
                         text = categoryInfo.third,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E2E2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -186,7 +179,7 @@ fun QuizDescriptionScreen(navController: NavController, quizPackId: String?) {
                         Text(
                             text = description ?: "Deskripsi tidak tersedia.",
                             fontSize = 16.sp,
-                            color = Color(0xFF616161),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 24.sp
                         )
                     }

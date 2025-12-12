@@ -135,14 +135,7 @@ fun QuizScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFFFF8E1),
-                        Color.White
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
             .pullRefresh(pullRefreshState),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -156,7 +149,7 @@ fun QuizScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -170,12 +163,12 @@ fun QuizScreen(navController: NavController) {
                             "Paket Quiz",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Pilih kategori untuk memulai",
                             fontSize = 14.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -183,7 +176,7 @@ fun QuizScreen(navController: NavController) {
                     Surface(
                         modifier = Modifier.size(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isOnline) Color(0xFF64B5F6) else Color(0xFFE0E0E0)
+                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         IconButton(
                             onClick = {
@@ -197,7 +190,7 @@ fun QuizScreen(navController: NavController) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
                                 contentDescription = "Download all questions",
-                                tint = if (isOnline) Color.White else Color(0xFF9E9E9E)
+                                tint = if (isOnline) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -216,14 +209,14 @@ fun QuizScreen(navController: NavController) {
                         verticalArrangement = Arrangement.Center
                     ) {
                         CircularProgressIndicator(
-                            color = Color(0xFF64B5F6),
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(50.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "Memuat paket soal...",
                             fontSize = 16.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -231,7 +224,7 @@ fun QuizScreen(navController: NavController) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -241,13 +234,13 @@ fun QuizScreen(navController: NavController) {
                             text = "Oops!",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE57373)
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = errorMessage!!,
                             fontSize = 14.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -255,7 +248,7 @@ fun QuizScreen(navController: NavController) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(
                         modifier = Modifier.padding(32.dp),
@@ -270,12 +263,12 @@ fun QuizScreen(navController: NavController) {
                             text = "Tidak ada paket soal",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Silakan coba lagi nanti",
                             fontSize = 14.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -306,7 +299,7 @@ fun QuizScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { if (!isDownloading) showDownloadDialog = false },
             shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -315,13 +308,13 @@ fun QuizScreen(navController: NavController) {
                     Surface(
                         modifier = Modifier.size(64.dp),
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFF64B5F6).copy(alpha = 0.15f)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
                                 contentDescription = null,
-                                tint = Color(0xFF64B5F6),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -331,7 +324,7 @@ fun QuizScreen(navController: NavController) {
                         "Download Pertanyaan",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E2E2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             },
@@ -386,7 +379,7 @@ fun QuizScreen(navController: NavController) {
                         "Download",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (!isDownloading) Color(0xFF64B5F6) else Color(0xFFBDBDBD)
+                        color = if (!isDownloading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },
@@ -398,7 +391,7 @@ fun QuizScreen(navController: NavController) {
                     Text(
                         "Batal",
                         fontSize = 16.sp,
-                        color = if (!isDownloading) Color(0xFF757575) else Color(0xFFBDBDBD)
+                        color = if (!isDownloading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -410,7 +403,7 @@ fun QuizScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { showNoConnectionDialog = false },
             shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -425,7 +418,7 @@ fun QuizScreen(navController: NavController) {
                         "Tidak Ada Koneksi",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E2E2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             },
@@ -433,7 +426,7 @@ fun QuizScreen(navController: NavController) {
                 Text(
                     "Tidak dapat mendownload pertanyaan karena tidak ada koneksi internet. Pastikan Anda terhubung ke internet dan coba lagi.",
                     fontSize = 14.sp,
-                    color = Color(0xFF616161),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     lineHeight = 20.sp
                 )
@@ -446,7 +439,7 @@ fun QuizScreen(navController: NavController) {
                         "OK",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64B5F6)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -482,7 +475,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
@@ -516,7 +509,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
                     text = pack.name,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E2E2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -543,7 +536,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
                     Text(
                         text = "$totalQuestions pertanyaan",
                         fontSize = 14.sp,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -555,7 +548,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0xFFE8E8E8))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Box(
                         modifier = Modifier

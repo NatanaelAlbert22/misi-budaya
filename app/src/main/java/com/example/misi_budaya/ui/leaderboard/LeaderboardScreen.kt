@@ -116,14 +116,7 @@ fun LeaderboardScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFFFF8E1),
-                        Color.White
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
             .pullRefresh(pullRefreshState),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -137,7 +130,7 @@ fun LeaderboardScreen() {
                     .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -168,12 +161,12 @@ fun LeaderboardScreen() {
                             "Leaderboard",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Top pemain terbaik",
                             fontSize = 14.sp,
-                            color = Color(0xFF757575)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -231,7 +224,7 @@ fun LeaderboardScreen() {
                             Text(
                                 "Memuat peringkat...",
                                 fontSize = 16.sp,
-                                color = Color(0xFF757575)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -241,7 +234,7 @@ fun LeaderboardScreen() {
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -251,13 +244,13 @@ fun LeaderboardScreen() {
                                 text = "Oops!",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE57373)
+                                color = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = errorMessage!!,
                                 fontSize = 14.sp,
-                                color = Color(0xFF757575),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
@@ -330,7 +323,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
             defaultElevation = if (rank <= 3) 6.dp else 3.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = if (rank <= 3) rankBgColor else Color.White
+            containerColor = if (rank <= 3) rankBgColor else MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -387,7 +380,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
                             user.username,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2E2E2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     
@@ -396,7 +389,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
                     Text(
                         "Level $level",
                         fontSize = 12.sp,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -404,7 +397,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
             // Score dengan background
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (rank <= 3) Color.White.copy(alpha = 0.7f) else Color(0xFFF5F5F5)
+                color = if (rank <= 3) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -414,12 +407,12 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
                         user.totalScore.toString().replace(Regex("(\\d)(?=(\\d{3})+$)"), "$1,"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (rank <= 3) rankColor else Color(0xFF2E2E2E)
+                        color = if (rank <= 3) rankColor else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         " XP",
                         fontSize = 12.sp,
-                        color = Color(0xFF757575),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 2.dp)
                     )
                 }
