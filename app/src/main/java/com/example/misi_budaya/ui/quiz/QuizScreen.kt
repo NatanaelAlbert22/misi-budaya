@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -280,7 +281,8 @@ fun QuizScreen(navController: NavController) {
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(quizPacks) { pack ->
                         QuizPackItem(
@@ -467,8 +469,12 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
     
     // Assume total questions = 24 untuk setiap paket
     val totalQuestions = 24
-    val completedQuestions = if (pack.isCompleted) totalQuestions else 0
-    val progress = completedQuestions.toFloat() / totalQuestions.toFloat()
+    // Hitung progress berdasarkan skor (skor maksimal 100)
+    val progress = if (pack.isCompleted) {
+        (pack.score.toFloat() / 100f).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
     
     Card(
         modifier = Modifier
@@ -543,7 +549,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Progress bar
+                // Progress bar berdasarkan skor
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -553,7 +559,7 @@ private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(if (pack.isCompleted) 1f else 0f)
+                            .fillMaxWidth(progress)
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(
