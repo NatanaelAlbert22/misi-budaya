@@ -10,7 +10,7 @@ import com.example.misi_budaya.data.model.QuestionDao
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.model.QuizPackageDao
 
-@Database(entities = [QuizPackage::class, Question::class], version = 7, exportSchema = false) // Incremented version for questionImageUrl field
+@Database(entities = [QuizPackage::class, Question::class], version = 8, exportSchema = false) // Incremented version for location-based fields
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun quizPackageDao(): QuizPackageDao

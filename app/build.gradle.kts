@@ -77,6 +77,12 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Google Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+    
+    // For runtime permissions
+    implementation("androidx.activity:activity-compose:1.8.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
