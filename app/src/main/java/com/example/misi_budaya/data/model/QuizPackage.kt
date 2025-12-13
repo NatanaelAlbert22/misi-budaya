@@ -10,6 +10,9 @@ data class QuizPackage(
     val description: String,
     val isCompleted: Boolean = false,
     val score: Int = 0,
+    // Secret quiz fields
+    val isSecret: Boolean = false, // Apakah paket ini adalah secret quiz
+    val isUnlocked: Boolean = false, // Apakah secret quiz sudah di-unlock oleh user
     // Location-based fields
     val isLocationBased: Boolean = false, // Apakah paket ini memerlukan pengecekan lokasi
     val requiredLocationId: Int? = null, // ID lokasi yang diperlukan untuk mengakses paket ini

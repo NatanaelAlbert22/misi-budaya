@@ -65,19 +65,46 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             }
             android.util.Log.d("QuizRepository", "Parsed ${firebasePaketList.size} Paket objects")
 
+            // Fetch unlockedQuizzes dari user document
+            val userId = auth.currentUser?.uid
+            val unlockedQuizzes = mutableSetOf<String>()
+            
+            if (userId != null) {
+                try {
+                    val userDoc = usersCollection.document(userId).get().await()
+                    @Suppress("UNCHECKED_CAST")
+                    val unlockedMap = userDoc.get("unlockedQuizzes") as? Map<String, Any>
+                    if (unlockedMap != null) {
+                        unlockedMap.forEach { (quizName, isUnlocked) ->
+                            if (isUnlocked == true) {
+                                unlockedQuizzes.add(quizName)
+                                android.util.Log.d("QuizRepository", "Found unlocked quiz: $quizName")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("QuizRepository", "Error fetching unlockedQuizzes: ${e.message}")
+                }
+            }
+
             val packagesToUpsert = mutableListOf<QuizPackage>()
 
-            for (paket in firebasePaketList.filter { !it.isSecret }) {
+            for (paket in firebasePaketList) {
                 val existingPackage = quizPackageDao.getQuizPackageByName(paket.namaPaket)
+                
+                // Check if this secret quiz is unlocked
+                val isUnlocked = unlockedQuizzes.contains(paket.namaPaket)
 
                 val mergedPackage = QuizPackage(
                     name = paket.namaPaket,
                     description = "",
                     score = existingPackage?.score ?: 0,
-                    isCompleted = existingPackage?.isCompleted ?: false
+                    isCompleted = existingPackage?.isCompleted ?: false,
+                    isSecret = paket.isSecret,
+                    isUnlocked = isUnlocked
                 )
                 packagesToUpsert.add(mergedPackage)
-                android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}")
+                android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}, isSecret: ${paket.isSecret}, isUnlocked: $isUnlocked")
             }
 
             android.util.Log.d("QuizRepository", "Inserting ${packagesToUpsert.size} packages to Room")

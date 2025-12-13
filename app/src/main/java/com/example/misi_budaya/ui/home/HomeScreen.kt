@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,9 +68,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.misi_budaya.R
 import com.example.misi_budaya.data.local.UserPreferencesManager
+import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.UserRepository
-import com.example.misi_budaya.ui.components.LocationDebugCard
+import com.example.misi_budaya.service.LocationAwareQuizService
 import com.example.misi_budaya.ui.components.OnlineModeDialog
+import com.example.misi_budaya.ui.components.SecretQuizUnlockedNotification
 import com.example.misi_budaya.util.NetworkMonitor
 import com.example.misi_budaya.util.location.LocationPermissionHelper
 import com.example.misi_budaya.util.location.LocationService
@@ -77,6 +80,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 data class QuizCategory(
     val name: String,
@@ -108,13 +112,28 @@ fun HomeScreen(
         )
     }
     
+    // Initialize LocationAwareQuizService untuk monitoring secret quiz
+    val currentUser = auth.currentUser
+    val quizAwareService = remember {
+        if (currentUser != null) {
+            LocationAwareQuizService(
+                context = context,
+                locationService = locationService,
+                userId = currentUser.uid
+            )
+        } else {
+            null
+        }
+    }
+    
     val isOnline by networkMonitor.observeNetworkStatus().collectAsState(initial = false)
     val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
     val hasSeenPrompt by preferencesManager.hasSeenOnlinePromptFlow.collectAsState(initial = false)
     
     var showOnlineModeDialog by remember { mutableStateOf(false) }
-    var showLocationDebugCard by remember { mutableStateOf(false) }
     var hasLocationPermission by remember { mutableStateOf(LocationPermissionHelper.hasLocationPermission(context)) }
+    var unlockedQuizzes by remember { mutableStateOf<List<String>>(emptyList()) }
+    var lastUnlockedQuiz by remember { mutableStateOf<String?>(null) }
     
     // Permission launcher untuk location
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -127,22 +146,37 @@ fun HomeScreen(
         }
     }
     
-    // Request location permission dan start tracking ketika debug card ditampilkan
-    LaunchedEffect(showLocationDebugCard) {
-        if (showLocationDebugCard) {
-            if (hasLocationPermission) {
-                locationService.startLocationUpdates()
-            } else {
-                // Request permission
-                permissionLauncher.launch(
-                    arrayOf(
-                        android.Manifest.permission.ACCESS_FINE_LOCATION,
-                        android.Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
+
+    
+    // Start LocationAwareQuizService saat screen dibuka (real-time monitoring)
+    LaunchedEffect(Unit) {
+        if (quizAwareService != null && hasLocationPermission) {
+            // Load unlocked quizzes dari Firestore dulu
+            quizAwareService.loadUnlockedQuizzes()
+            // Tunggu sebentar untuk memastikan loading selesai
+            delay(500)
+            // Sync initial state dengan yang sudah di-load di service
+            unlockedQuizzes = quizAwareService.unlockedQuizzes
+            // Setelah itu baru start monitoring
+            quizAwareService.startMonitoring()
+        }
+    }
+    
+    // Cleanup LocationAwareQuizService saat screen ditutup
+    DisposableEffect(Unit) {
+        onDispose {
+            quizAwareService?.stopMonitoring()
+        }
+    }
+    
+    // Listen untuk new unlocked quiz events dari LocationAwareQuizService
+    LaunchedEffect(quizAwareService) {
+        if (quizAwareService != null) {
+            quizAwareService.newUnlockedQuizEvent.collect { quizName ->
+                lastUnlockedQuiz = quizName
+                unlockedQuizzes = quizAwareService.unlockedQuizzes
+                android.util.Log.d("HomeScreen", "🎉 New quiz unlocked: $quizName")
             }
-        } else {
-            locationService.stopLocationUpdates()
         }
     }
     
@@ -165,6 +199,7 @@ fun HomeScreen(
     var userXP by rememberSaveable { mutableStateOf(0) }
     var isLoadingUser by rememberSaveable { mutableStateOf(true) }
     var hasLoadedUser by rememberSaveable { mutableStateOf(false) }
+    var unlockedSecretQuizzes by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
     
     // Fetch user profile dari Firestore - HANYA SEKALI
     LaunchedEffect(Unit) {
@@ -273,6 +308,20 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
+        // Secret Quiz Unlocked Notification
+        SecretQuizUnlockedNotification(
+            quizName = lastUnlockedQuiz ?: "",
+            isVisible = lastUnlockedQuiz != null,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        // Auto-hide notification after 5 seconds
+        if (lastUnlockedQuiz != null) {
+            LaunchedEffect(lastUnlockedQuiz) {
+                delay(5000)
+                lastUnlockedQuiz = null
+            }
+        }
         // Header Card dengan info user
         Card(
             modifier = Modifier
@@ -428,53 +477,6 @@ fun HomeScreen(
                     )
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Button Test Lokasi (DEBUG)
-        androidx.compose.material3.Button(
-            onClick = { showLocationDebugCard = !showLocationDebugCard },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = "Test Lokasi",
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(
-                text = if (showLocationDebugCard) "Sembunyikan Lokasi" else "Test Lokasi (DEBUG)",
-                fontSize = 14.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Location Debug Card
-        if (showLocationDebugCard) {
-            LocationDebugCard(
-                locationService = locationService,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                onStartTracking = {
-                    if (hasLocationPermission) {
-                        locationService.startLocationUpdates()
-                    } else {
-                        // Request permission
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    }
-                },
-                onStopTracking = {
-                    locationService.stopLocationUpdates()
-                }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))

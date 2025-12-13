@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,6 +94,14 @@ fun QuizScreen(navController: NavController) {
         if (isOnline && quizPacks.isNotEmpty()) {
             // User just went online, refresh paket data to get latest scores
             presenter.onRefresh()
+        }
+    }
+    
+    // Periodically refresh quiz list to show unlocked secret quizzes
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(3000L) // Refresh setiap 3 detik
+            presenter.loadQuizPacks()
         }
     }
 
@@ -277,11 +286,54 @@ fun QuizScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    items(quizPacks) { pack ->
-                        QuizPackItem(
-                            pack = pack,
-                            onClick = { navController.navigate("quiz_description/${pack.name}") }
-                        )
+                    // Sort: secret quizzes first, then regular ones
+                    val sortedPacks = quizPacks.sortedByDescending { it.isSecret }
+                    items(sortedPacks) { pack ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable { navController.navigate("quiz_description/${pack.name}") },
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = pack.name,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    if (pack.isCompleted) {
+                                        Text(
+                                            text = "✓ Selesai • Skor: ${pack.score}",
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF4CAF50),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "24 pertanyaan",
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "→",
+                                    fontSize = 24.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -444,128 +496,5 @@ fun QuizScreen(navController: NavController) {
                 }
             }
         )
-    }
-}
-
-@Composable
-private fun QuizPackItem(pack: QuizPackage, onClick: () -> Unit) {
-    // Mapping kategori ke warna dan icon
-    val (categoryColor, categoryIcon) = remember(pack.name) {
-        when (pack.name) {
-            "Pakaian Adat" -> Pair(Color(0xFFE57373), Icons.Default.Home)
-            "Makanan Khas" -> Pair(Color(0xFF64B5F6), Icons.Default.Fastfood)
-            "Geografi" -> Pair(Color(0xFF81C784), Icons.Default.Map)
-            "Kesenian" -> Pair(Color(0xFFBA68C8), Icons.Default.LocalActivity)
-            else -> Pair(Color(0xFF9E9E9E), Icons.Default.Home)
-        }
-    }
-    
-    // Assume total questions = 24 untuk setiap paket
-    val totalQuestions = 24
-    // Hitung progress berdasarkan skor (skor maksimal 100)
-    val progress = if (pack.isCompleted) {
-        (pack.score.toFloat() / 100f).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icon kategori dengan background warna
-            Surface(
-                modifier = Modifier.size(64.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = categoryColor.copy(alpha = 0.15f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = categoryIcon,
-                        contentDescription = pack.name,
-                        tint = categoryColor,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.padding(horizontal = 12.dp))
-
-            // Info paket
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = pack.name,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                if (pack.isCompleted) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Completed",
-                            tint = Color(0xFF4CAF50),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                        Text(
-                            text = "Selesai • Skor: ${pack.score}",
-                            fontSize = 14.sp,
-                            color = Color(0xFF4CAF50),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "$totalQuestions pertanyaan",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Progress bar berdasarkan skor
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progress)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        categoryColor.copy(alpha = 0.7f),
-                                        categoryColor
-                                    )
-                                )
-                            )
-                    )
-                }
-            }
-        }
     }
 }
