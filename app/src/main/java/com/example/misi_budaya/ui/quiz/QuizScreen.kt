@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +63,7 @@ import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.QuizRepository
 import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -292,7 +294,6 @@ fun QuizScreen(navController: NavController) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
                                 .clickable { navController.navigate("quiz_description/${pack.name}") },
                             shape = RoundedCornerShape(20.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -304,6 +305,27 @@ fun QuizScreen(navController: NavController) {
                                     .padding(20.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Icon/Image di sebelah kiri
+                                Surface(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    color = Color(0xFFEEEEEE)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        AsyncImage(
+                                            model = pack.iconUrl,
+                                            contentDescription = pack.name,
+                                            modifier = Modifier
+                                                .size(80.dp)
+                                                .clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = pack.name,

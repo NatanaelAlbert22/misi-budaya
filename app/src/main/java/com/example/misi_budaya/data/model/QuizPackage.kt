@@ -16,5 +16,6 @@ data class QuizPackage(
     // Location-based fields
     val isLocationBased: Boolean = false, // Apakah paket ini memerlukan pengecekan lokasi
     val requiredLocationId: Int? = null, // ID lokasi yang diperlukan untuk mengakses paket ini
-    val unlockedAtLocation: Boolean = false // Flag apakah paket sudah di-unlock karena pemain berada di lokasi
+    val unlockedAtLocation: Boolean = false, // Flag apakah paket sudah di-unlock karena pemain berada di lokasi
+    val iconUrl: String = "" // URL icon/gambar paket dari Firestore
 )

@@ -29,8 +29,12 @@ data class Paket(
     
     @get:PropertyName("radiusMeters")
     @set:PropertyName("radiusMeters")
-    var radiusMeters: Float = 500f // Radius untuk secret quiz detection
+    var radiusMeters: Float = 500f, // Radius untuk secret quiz detection
+    
+    @get:PropertyName("icon")
+    @set:PropertyName("icon")
+    var icon: String = "" // URL untuk icon/gambar paket
 ) {
     // Konstruktor kosong diperlukan oleh Firebase untuk deserialisasi data
-    constructor() : this("", "", false, "", null, 500f)
+    constructor() : this("", "", false, "", null, 500f, "")
 }

@@ -112,7 +112,8 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                     score = existingPackage?.score ?: 0,
                     isCompleted = existingPackage?.isCompleted ?: false,
                     isSecret = paket.isSecret,
-                    isUnlocked = isUnlocked
+                    isUnlocked = isUnlocked,
+                    iconUrl = paket.icon // Tambahkan icon URL dari Firestore
                 )
                 packagesToUpsert.add(mergedPackage)
                 android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}, isSecret: ${paket.isSecret}, isUnlocked: $isUnlocked, isPremium: $isPremium")
