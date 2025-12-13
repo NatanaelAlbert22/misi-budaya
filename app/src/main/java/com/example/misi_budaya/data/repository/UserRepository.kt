@@ -142,7 +142,8 @@ class UserRepository {
                 email = user.email ?: "",
                 totalScore = 0L,
                 quizScores = emptyMap(),
-                unlockedQuizzes = emptyMap()
+                unlockedQuizzes = emptyMap(),
+                isPremium = false // Setiap user baru dimulai dengan isPremium = false
             )
             saveUserProfile(profile)
         } catch (e: Exception) {
@@ -162,6 +163,23 @@ class UserRepository {
             !result.isEmpty
         } catch (e: Exception) {
             false
+        }
+    }
+    
+    /**
+     * Upgrade user menjadi premium (ubah isPremium menjadi true)
+     */
+    suspend fun upgradeToPremium(uid: String): Result<Unit> {
+        return try {
+            val timestamp = System.currentTimeMillis()
+            usersCollection.document(uid).update(
+                "isPremium", true,
+                "premiumUpgradeDate", timestamp
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to upgrade to premium", e)
+            Result.failure(Exception("Gagal mengupgrade ke premium: ${e.message}"))
         }
     }
 }

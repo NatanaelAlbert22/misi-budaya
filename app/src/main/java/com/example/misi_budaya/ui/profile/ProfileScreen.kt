@@ -93,11 +93,13 @@ fun ProfileScreen(rootNavController: NavController) {
     var showLoginRequiredDialog by remember { mutableStateOf(false) }
     var showEditUsernameDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showPremiumModal by remember { mutableStateOf(false) }
     
     // User profile state dengan rememberSaveable
     var currentUsername by rememberSaveable { mutableStateOf("") }
     var userEmail by rememberSaveable { mutableStateOf("") }
     var isLoadingProfile by rememberSaveable { mutableStateOf(true) }
+    var isPremium by rememberSaveable { mutableStateOf(false) }
     var isGoogleUser by rememberSaveable { mutableStateOf(false) }
     var hasLoadedProfile by rememberSaveable { mutableStateOf(false) }
     
@@ -116,6 +118,7 @@ fun ProfileScreen(rootNavController: NavController) {
                 userRepository.getUserProfile(currentUser.uid).fold(
                     onSuccess = { profile ->
                         currentUsername = profile.username
+                        isPremium = profile.isPremium
                         isLoadingProfile = false
                         hasLoadedProfile = true
                     },
@@ -347,6 +350,101 @@ fun ProfileScreen(rootNavController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         if (currentUser != null) {
+            // Premium Card
+            if (!isPremium) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF3CD) // Warna kuning terang untuk premium
+                    ),
+                    onClick = { showPremiumModal = true }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "👑 Tingkatkan Akun",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E2E2E)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "Akses semua soal secret tanpa perlu datang ke lokasi tertentu",
+                            fontSize = 13.sp,
+                            color = Color(0xFF546E7A),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Button(
+                            onClick = { showPremiumModal = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF9800)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Perbarui Sekarang",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                // Premium Badge untuk user yang sudah premium
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFC8E6C9) // Warna hijau untuk premium status
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Premium",
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Text(
+                            text = "Akun Premium Aktif",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // User Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -679,6 +777,43 @@ fun ProfileScreen(rootNavController: NavController) {
             }
         )
     }
+    
+    // Dialog Premium Upgrade
+    if (showPremiumModal) {
+        PremiumUpgradeDialog(
+            onDismiss = { showPremiumModal = false },
+            onPurchase = {
+                scope.launch {
+                    if (currentUser != null) {
+                        userRepository.upgradeToPremium(currentUser.uid).fold(
+                            onSuccess = {
+                                isPremium = true
+                                showPremiumModal = false
+                                Toast.makeText(
+                                    context,
+                                    "🎉 Selamat! Anda sekarang premium!",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            },
+                            onFailure = { error ->
+                                Toast.makeText(
+                                    context,
+                                    "Gagal upgrade: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        )
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Silakan login terlebih dahulu",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -970,6 +1105,154 @@ fun ChangePasswordDialog(
                 enabled = !isLoading
             ) {
                 Text("Batal")
+            }
+        }
+    )
+}
+
+@Composable
+private fun PremiumUpgradeDialog(
+    onDismiss: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "👑 Upgrade ke Premium",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Dapatkan akses penuh ke semua fitur eksklusif",
+                    fontSize = 14.sp,
+                    color = Color(0xFF546E7A),
+                    fontWeight = FontWeight.SemiBold
+                )
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Feature list
+                val features = listOf(
+                    "✓ Akses semua paket soal",
+                    "✓ Tidak perlu datang ke lokasi tertentu",
+                    "✓ Hemat baterai (skip location tracking)",
+                    "✓ Unlock semua konten rahasia"
+                )
+                
+                features.forEach { feature ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = feature,
+                            fontSize = 13.sp,
+                            color = Color(0xFF2E2E2E),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Pricing card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF3CD)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Harga Spesial",
+                            fontSize = 12.sp,
+                            color = Color(0xFF757575)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Rp 49.999",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF9800)
+                            )
+                            
+                            Spacer(modifier = Modifier.width(4.dp))
+                            
+                            Text(
+                                text = "/bulan",
+                                fontSize = 12.sp,
+                                color = Color(0xFF757575)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "Pembatalan kapan saja",
+                            fontSize = 11.sp,
+                            color = Color(0xFF757575),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onPurchase,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF9800)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Mulai Premium Sekarang",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Nanti Saja",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF757575)
+                )
             }
         }
     )

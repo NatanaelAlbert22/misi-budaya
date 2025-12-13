@@ -65,13 +65,19 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             }
             android.util.Log.d("QuizRepository", "Parsed ${firebasePaketList.size} Paket objects")
 
-            // Fetch unlockedQuizzes dari user document
+            // Fetch user data untuk cek isPremium dan unlockedQuizzes
             val userId = auth.currentUser?.uid
             val unlockedQuizzes = mutableSetOf<String>()
+            var isPremium = false
             
             if (userId != null) {
                 try {
                     val userDoc = usersCollection.document(userId).get().await()
+                    
+                    // Cek isPremium status
+                    isPremium = userDoc.getBoolean("isPremium") ?: false
+                    android.util.Log.d("QuizRepository", "User isPremium: $isPremium")
+                    
                     @Suppress("UNCHECKED_CAST")
                     val unlockedMap = userDoc.get("unlockedQuizzes") as? Map<String, Any>
                     if (unlockedMap != null) {
@@ -83,7 +89,7 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.w("QuizRepository", "Error fetching unlockedQuizzes: ${e.message}")
+                    android.util.Log.w("QuizRepository", "Error fetching user data: ${e.message}")
                 }
             }
 
@@ -93,7 +99,12 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                 val existingPackage = quizPackageDao.getQuizPackageByName(paket.namaPaket)
                 
                 // Check if this secret quiz is unlocked
-                val isUnlocked = unlockedQuizzes.contains(paket.namaPaket)
+                // Jika user premium, semua secret quiz dianggap unlocked
+                val isUnlocked = if (isPremium && paket.isSecret) {
+                    true
+                } else {
+                    unlockedQuizzes.contains(paket.namaPaket)
+                }
 
                 val mergedPackage = QuizPackage(
                     name = paket.namaPaket,
@@ -104,7 +115,7 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                     isUnlocked = isUnlocked
                 )
                 packagesToUpsert.add(mergedPackage)
-                android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}, isSecret: ${paket.isSecret}, isUnlocked: $isUnlocked")
+                android.util.Log.d("QuizRepository", "Added package to upsert: ${paket.namaPaket}, isSecret: ${paket.isSecret}, isUnlocked: $isUnlocked, isPremium: $isPremium")
             }
 
             android.util.Log.d("QuizRepository", "Inserting ${packagesToUpsert.size} packages to Room")
@@ -207,7 +218,8 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                         username = currentUser.displayName ?: "",
                         quizScores = mapOf(quizName to newScore.toLong()),
                         totalScore = newScore.toLong(),
-                        unlockedQuizzes = emptyMap() // Default for new user
+                        unlockedQuizzes = emptyMap(), // Default for new user
+                        isPremium = false // Setiap user baru dimulai dengan isPremium = false
                     )
                     transaction.set(userDocRef, newUserProfile)
                 }

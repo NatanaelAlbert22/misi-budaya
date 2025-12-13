@@ -48,15 +48,46 @@ class LocationAwareQuizService(
     
     fun startMonitoring() {
         Log.d(TAG, "🚀 Starting location monitoring for user: $userId")
-        locationService.startLocationUpdates()
         
         coroutineScope.launch {
-            locationService.currentLocation.collect { location ->
-                if (location != null) {
-                    Log.d(TAG, "📍 Location update received: ${location.latitude}, ${location.longitude}, accuracy: ${location.accuracy}m")
-                    checkSecretQuizzes(location)
-                } else {
-                    Log.w(TAG, "⚠️ Location is null")
+            // Cek apakah user premium
+            try {
+                val userDoc = firestore.collection("users")
+                    .document(userId)
+                    .get()
+                    .await()
+                
+                val isPremium = userDoc.getBoolean("isPremium") ?: false
+                
+                if (isPremium) {
+                    Log.d(TAG, "👑 User is premium! Skipping location monitoring.")
+                    // Premium users tidak perlu location monitoring
+                    return@launch
+                }
+                
+                Log.d(TAG, "📍 User is not premium. Starting location monitoring...")
+                locationService.startLocationUpdates()
+                
+                locationService.currentLocation.collect { location ->
+                    if (location != null) {
+                        Log.d(TAG, "📍 Location update received: ${location.latitude}, ${location.longitude}, accuracy: ${location.accuracy}m")
+                        checkSecretQuizzes(location)
+                    } else {
+                        Log.w(TAG, "⚠️ Location is null")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking premium status or monitoring location", e)
+                // Fallback: mulai location monitoring jika ada error
+                try {
+                    locationService.startLocationUpdates()
+                    locationService.currentLocation.collect { location ->
+                        if (location != null) {
+                            checkSecretQuizzes(location)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Fallback location monitoring also failed", e)
                 }
             }
         }
@@ -69,11 +100,20 @@ class LocationAwareQuizService(
     }
     
     /**
-     * Check semua secret quiz dan unlock jika user berada di lokasi
+     * Check semua secret quiz dan unlock jika user berada di lokasi atau jika user premium
      */
     private suspend fun checkSecretQuizzes(location: LocationData) {
         try {
             Log.d(TAG, "Checking secret quizzes for location: ${location.latitude}, ${location.longitude}")
+            
+            // Cek dulu apakah user adalah premium user
+            val userDoc = firestore.collection("users")
+                .document(userId)
+                .get()
+                .await()
+            
+            val isPremium = userDoc.getBoolean("isPremium") ?: false
+            Log.d(TAG, "User isPremium: $isPremium")
             
             // Fetch semua quiz packages dari Firestore
             firestore.collection("Paket")
@@ -97,35 +137,42 @@ class LocationAwareQuizService(
                             Log.d(TAG, "Processing quiz: $quizName, isSecret: $isSecret")
                             
                             if (isSecret) {
-                                // Extract location dari Firestore (GeoPoint format)
-                                val geoPoint = quizData["location"] as? GeoPoint
-                                Log.d(TAG, "GeoPoint: $geoPoint")
-                                
-                                if (geoPoint != null) {
-                                    val lat = geoPoint.latitude
-                                    val lon = geoPoint.longitude
-                                    
-                                    Log.d(TAG, "Quiz location: lat=$lat, lon=$lon")
-                                    
-                                    // Check distance
-                                    val distance = locationService.calculateDistance(
-                                        location.latitude, location.longitude,
-                                        lat, lon
-                                    )
-                                    
-                                    val radiusMeters = (quizData["radiusMeters"] as? Number)?.toFloat() ?: 500f
-                                    
-                                    Log.d(TAG, "Quiz: $quizName, Distance: ${"%.2f".format(distance)} m, Radius: ${"%.2f".format(radiusMeters)} m")
-                                    
-                                    // Jika user dalam radius, unlock quiz
-                                    if (distance <= radiusMeters) {
-                                        Log.d(TAG, "✅ User DALAM RADIUS! Unlocking quiz: $quizName")
-                                        unlockSecretQuiz(quizName, lat, lon)
-                                    } else {
-                                        Log.d(TAG, "❌ User DILUAR RADIUS untuk quiz: $quizName")
-                                    }
+                                // Jika user premium, unlock semua secret quiz
+                                if (isPremium) {
+                                    Log.d(TAG, "👑 Premium user detected! Auto-unlocking secret quiz: $quizName")
+                                    unlockSecretQuiz(quizName, 0.0, 0.0)
                                 } else {
-                                    Log.w(TAG, "GeoPoint is null for quiz: $quizName")
+                                    // Jika bukan premium, check lokasi biasa
+                                    // Extract location dari Firestore (GeoPoint format)
+                                    val geoPoint = quizData["location"] as? GeoPoint
+                                    Log.d(TAG, "GeoPoint: $geoPoint")
+                                    
+                                    if (geoPoint != null) {
+                                        val lat = geoPoint.latitude
+                                        val lon = geoPoint.longitude
+                                        
+                                        Log.d(TAG, "Quiz location: lat=$lat, lon=$lon")
+                                        
+                                        // Check distance
+                                        val distance = locationService.calculateDistance(
+                                            location.latitude, location.longitude,
+                                            lat, lon
+                                        )
+                                        
+                                        val radiusMeters = (quizData["radiusMeters"] as? Number)?.toFloat() ?: 500f
+                                        
+                                        Log.d(TAG, "Quiz: $quizName, Distance: ${"%.2f".format(distance)} m, Radius: ${"%.2f".format(radiusMeters)} m")
+                                        
+                                        // Jika user dalam radius, unlock quiz
+                                        if (distance <= radiusMeters) {
+                                            Log.d(TAG, "✅ User DALAM RADIUS! Unlocking quiz: $quizName")
+                                            unlockSecretQuiz(quizName, lat, lon)
+                                        } else {
+                                            Log.d(TAG, "❌ User DILUAR RADIUS untuk quiz: $quizName")
+                                        }
+                                    } else {
+                                        Log.w(TAG, "GeoPoint is null for quiz: $quizName")
+                                    }
                                 }
                             }
                         }

@@ -17,8 +17,12 @@ data class UserProfile(
 
     @get:PropertyName("unlockedQuizzes")
     @set:PropertyName("unlockedQuizzes")
-    var unlockedQuizzes: Map<String, Boolean> = emptyMap()
+    var unlockedQuizzes: Map<String, Boolean> = emptyMap(),
+
+    @get:PropertyName("isPremium")
+    @set:PropertyName("isPremium")
+    var isPremium: Boolean = false // Flag untuk status premium user
 ) {
     // Empty constructor required by Firebase
-    constructor() : this("", "", "", 0L, emptyMap(), emptyMap())
+    constructor() : this("", "", "", 0L, emptyMap(), emptyMap(), false)
 }
