@@ -1,5 +1,6 @@
 package com.example.misi_budaya.ui.home
 
+import android.Manifest
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalActivity
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
@@ -47,6 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,8 +68,12 @@ import androidx.navigation.NavController
 import com.example.misi_budaya.R
 import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.data.repository.UserRepository
+import com.example.misi_budaya.ui.components.LocationDebugCard
 import com.example.misi_budaya.ui.components.OnlineModeDialog
 import com.example.misi_budaya.util.NetworkMonitor
+import com.example.misi_budaya.util.location.LocationPermissionHelper
+import com.example.misi_budaya.util.location.LocationService
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,11 +100,51 @@ fun HomeScreen(
     val auth = remember { FirebaseAuth.getInstance() }
     val userRepository = remember { UserRepository() }
     
+    // Initialize LocationService
+    val locationService = remember {
+        LocationService(
+            context = context,
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        )
+    }
+    
     val isOnline by networkMonitor.observeNetworkStatus().collectAsState(initial = false)
     val isOfflineMode by preferencesManager.isOfflineModeFlow.collectAsState(initial = false)
     val hasSeenPrompt by preferencesManager.hasSeenOnlinePromptFlow.collectAsState(initial = false)
     
     var showOnlineModeDialog by remember { mutableStateOf(false) }
+    var showLocationDebugCard by remember { mutableStateOf(false) }
+    var hasLocationPermission by remember { mutableStateOf(LocationPermissionHelper.hasLocationPermission(context)) }
+    
+    // Permission launcher untuk location
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.all { it.value }
+        if (granted) {
+            hasLocationPermission = true
+            locationService.startLocationUpdates()
+        }
+    }
+    
+    // Request location permission dan start tracking ketika debug card ditampilkan
+    LaunchedEffect(showLocationDebugCard) {
+        if (showLocationDebugCard) {
+            if (hasLocationPermission) {
+                locationService.startLocationUpdates()
+            } else {
+                // Request permission
+                permissionLauncher.launch(
+                    arrayOf(
+                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        } else {
+            locationService.stopLocationUpdates()
+        }
+    }
     
     // Detect ketika online dan masih dalam offline mode
     LaunchedEffect(isOnline, isOfflineMode, hasSeenPrompt) {
@@ -222,6 +271,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
     ) {
         // Header Card dengan info user
         Card(
@@ -378,6 +428,53 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Button Test Lokasi (DEBUG)
+        androidx.compose.material3.Button(
+            onClick = { showLocationDebugCard = !showLocationDebugCard },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = "Test Lokasi",
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(
+                text = if (showLocationDebugCard) "Sembunyikan Lokasi" else "Test Lokasi (DEBUG)",
+                fontSize = 14.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Location Debug Card
+        if (showLocationDebugCard) {
+            LocationDebugCard(
+                locationService = locationService,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onStartTracking = {
+                    if (hasLocationPermission) {
+                        locationService.startLocationUpdates()
+                    } else {
+                        // Request permission
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                },
+                onStopTracking = {
+                    locationService.stopLocationUpdates()
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))

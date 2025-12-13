@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.location.Location as AndroidLocation
 import android.os.Looper
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -28,6 +29,11 @@ class LocationService(
     val currentLocation: StateFlow<LocationData?> = _currentLocation.asStateFlow()
 
     private var locationCallback: LocationCallback? = null
+    private var isTracking = false
+
+    private companion object {
+        private const val TAG = "LocationService"
+    }
 
     @RequiresPermission(
         anyOf = [
@@ -36,6 +42,12 @@ class LocationService(
         ]
     )
     fun startLocationUpdates() {
+        if (isTracking) {
+            Log.w(TAG, "Location tracking already started")
+            return
+        }
+
+        Log.d(TAG, "Starting location updates...")
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             5000L // Update setiap 5 detik
@@ -47,6 +59,7 @@ class LocationService(
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
+                    Log.d(TAG, "Location received: ${location.latitude}, ${location.longitude}, accuracy: ${location.accuracy}")
                     _currentLocation.value = LocationData(
                         latitude = location.latitude,
                         longitude = location.longitude,
@@ -62,16 +75,21 @@ class LocationService(
                 locationCallback!!,
                 Looper.getMainLooper()
             )
+            isTracking = true
+            Log.d(TAG, "Location updates request sent successfully")
         } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception: ${e.message}", e)
             e.printStackTrace()
         }
     }
 
     fun stopLocationUpdates() {
+        Log.d(TAG, "Stopping location updates...")
         locationCallback?.let {
             fusedLocationClient.removeLocationUpdates(it)
         }
         locationCallback = null
+        isTracking = false
     }
 
     @RequiresPermission(
@@ -82,8 +100,10 @@ class LocationService(
     )
     suspend fun getLastLocation(): LocationData? {
         return try {
+            Log.d(TAG, "Getting last location...")
             val location = fusedLocationClient.lastLocation.result
             location?.let {
+                Log.d(TAG, "Last location: ${it.latitude}, ${it.longitude}")
                 LocationData(
                     latitude = it.latitude,
                     longitude = it.longitude,
@@ -91,6 +111,7 @@ class LocationService(
                 )
             }
         } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception getting last location: ${e.message}")
             null
         }
     }

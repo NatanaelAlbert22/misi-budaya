@@ -98,4 +98,36 @@ class LocationPermissionHelper(private val context: Context) {
             permissionLauncher.launch(permissionsToRequest)
         }
     }
+
+    companion object {
+        /**
+         * Cek apakah permission lokasi sudah diberikan
+         */
+        fun hasLocationPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        /**
+         * Cek apakah permission fine location sudah diberikan
+         */
+        fun hasFineLocationPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        /**
+         * Cek apakah permission coarse location sudah diberikan
+         */
+        fun hasCoarseLocationPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
 }

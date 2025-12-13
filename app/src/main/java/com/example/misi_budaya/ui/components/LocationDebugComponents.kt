@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.misi_budaya.util.location.LocationData
 import com.example.misi_budaya.util.location.LocationService
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Debug Component untuk menampilkan lokasi pemain saat ini
@@ -69,12 +68,31 @@ fun LocationDebugCard(
             if (currentLocation != null) {
                 LocationDataDisplay(currentLocation!!, clipboardManager)
             } else {
-                Text(
-                    text = "⏳ Menunggu sinyal GPS...",
-                    fontSize = 12.sp,
-                    color = Color(0xFFFFC107),
-                    fontWeight = FontWeight.SemiBold
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2D2D2D), shape = RoundedCornerShape(8.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "⏳ Menunggu sinyal GPS...",
+                        fontSize = 12.sp,
+                        color = Color(0xFFFFC107),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Status: GPS sedang mencari sinyal",
+                        fontSize = 11.sp,
+                        color = Color(0xFF90CAF9)
+                    )
+                    Text(
+                        text = "Tips: Buka app Maps terlebih dahulu atau ubah lokasi di emulator",
+                        fontSize = 10.sp,
+                        color = Color(0xFF81C784),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             // Control Buttons
