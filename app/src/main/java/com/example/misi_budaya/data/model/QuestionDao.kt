@@ -10,6 +10,9 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE quizPackageName = :quizName")
     suspend fun getQuestionsForQuiz(quizName: String): List<Question>
 
+    @Query("SELECT COUNT(*) FROM questions WHERE quizPackageName = :quizName")
+    suspend fun countQuestionsForQuiz(quizName: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(questions: List<Question>)
 

@@ -76,6 +76,7 @@ fun QuizScreen(navController: NavController) {
     var isDownloading by remember { mutableStateOf(false) }
     var downloadMessage by remember { mutableStateOf<String?>(null) }
     var showNoConnectionDialog by remember { mutableStateOf(false) }
+    var questionCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
@@ -104,6 +105,31 @@ fun QuizScreen(navController: NavController) {
         while (true) {
             kotlinx.coroutines.delay(3000L) // Refresh setiap 3 detik
             presenter.loadQuizPacks()
+        }
+    }
+
+    // Load question counts only once when quiz packs first become available
+    val countLoadingStarted = remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(quizPacks) {
+        if (quizPacks.isNotEmpty() && !countLoadingStarted.value) {
+            countLoadingStarted.value = true
+            scope.launch {
+                try {
+                    val newCounts = mutableMapOf<String, Int>()
+                    for (pack in quizPacks) {
+                        val count = repository.getQuestionCount(pack.name)
+                        newCounts[pack.name] = count
+                    }
+                    questionCounts = newCounts
+                } catch (e: Exception) {
+                    // If loading fails, set all counts to 0
+                    val newCounts = mutableMapOf<String, Int>()
+                    for (pack in quizPacks) {
+                        newCounts[pack.name] = 0
+                    }
+                    questionCounts = newCounts
+                }
+            }
         }
     }
 
@@ -342,8 +368,14 @@ fun QuizScreen(navController: NavController) {
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     } else {
+                                        val questionCount = questionCounts[pack.name] ?: -1
+                                        val countText = when {
+                                            questionCount > 0 -> "$questionCount pertanyaan"
+                                            questionCount == 0 -> "0 pertanyaan"
+                                            else -> "Memuat..."
+                                        }
                                         Text(
-                                            text = "24 pertanyaan",
+                                            text = countText,
                                             fontSize = 14.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )

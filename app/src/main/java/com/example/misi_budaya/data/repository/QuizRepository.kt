@@ -160,6 +160,26 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
         return questionsToCache
     }
 
+    suspend fun getQuestionCount(paketId: String): Int {
+        return try {
+            // Try to get from local database first
+            val localCount = questionDao.countQuestionsForQuiz(paketId)
+            if (localCount > 0) {
+                localCount
+            } else {
+                // If local is empty, try loading from Firebase
+                val firebaseSoalList = soalCollection.whereEqualTo("paketId", paketId).get().await()
+                    .documents.mapNotNull { document ->
+                        document.toObject(Soal::class.java)?.apply { id = document.id }
+                    }
+                firebaseSoalList.size
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("QuizRepository", "Error getting question count for $paketId", e)
+            0
+        }
+    }
+
     // --- Score Updates ---
     suspend fun updateQuizScore(quizName: String, newScore: Int) {
         // Update Local Score (Room)
