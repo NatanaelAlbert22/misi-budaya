@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.misi_budaya.data.local.AppDatabase
+import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.data.model.Question
 import com.example.misi_budaya.data.repository.QuizRepository
 
@@ -66,7 +67,8 @@ fun QuestionScreen(navController: NavController, quizPackId: String?) {
 
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val repository = remember { QuizRepository(db.quizPackageDao(), db.questionDao()) }
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val repository = remember { QuizRepository(db.quizPackageDao(), db.questionDao(), context, preferencesManager) }
     val scope = rememberCoroutineScope()
     val presenter = remember { QuestionPresenter(repository, scope) }
 

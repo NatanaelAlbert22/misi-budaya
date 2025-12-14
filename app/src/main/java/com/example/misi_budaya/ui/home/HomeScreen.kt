@@ -1,6 +1,7 @@
 package com.example.misi_budaya.ui.home
 
 import android.Manifest
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,7 +67,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.misi_budaya.R
+import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.data.model.QuizPackage
 import com.example.misi_budaya.data.repository.UserRepository
@@ -84,7 +87,7 @@ import kotlinx.coroutines.flow.collect
 
 data class QuizCategory(
     val name: String,
-    val icon: ImageVector,
+    val iconUrl: String,
     val color: Color,
     val completedQuestions: Int,
     val totalQuestions: Int,
@@ -103,6 +106,7 @@ fun HomeScreen(
     val preferencesManager = remember { UserPreferencesManager(context) }
     val auth = remember { FirebaseAuth.getInstance() }
     val userRepository = remember { UserRepository() }
+    val db = remember { AppDatabase.getDatabase(context) }
     
     // Initialize LocationService
     val locationService = remember {
@@ -200,6 +204,43 @@ fun HomeScreen(
     var isLoadingUser by rememberSaveable { mutableStateOf(true) }
     var hasLoadedUser by rememberSaveable { mutableStateOf(false) }
     var unlockedSecretQuizzes by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
+    var completedMissions by remember { mutableStateOf(3) }
+    var totalMissions by remember { mutableStateOf(5) }
+    var dailyCompletedPackages by remember { mutableStateOf(0) }
+    var quizPackages by remember { mutableStateOf<List<QuizPackage>>(emptyList()) }
+    
+    // Load daily completed packages dan check apakah perlu reset
+    val dailyCompletedPackagesCollect by preferencesManager.dailyPackageCountFlow.collectAsState(initial = 0)
+    
+    // Load quiz packages dari database untuk mendapatkan icon URL
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                db.quizPackageDao().getAllQuizPackages().collect { packages ->
+                    quizPackages = packages
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeScreen", "Error loading quiz packages: ", e)
+            }
+        }
+        
+        val today = java.time.LocalDate.now().toString() // Format: YYYY-MM-DD
+        val prefs = context.getSharedPreferences("daily_reset", Context.MODE_PRIVATE)
+        val lastResetDate = prefs.getString("last_reset_date", "")
+        
+        // Jika hari berbeda dengan last reset date, reset counter
+        if (lastResetDate != today) {
+            scope.launch {
+                preferencesManager.resetDailyPackageCount()
+                prefs.edit().putString("last_reset_date", today).apply()
+            }
+        }
+    }
+    
+    // Update dailyCompletedPackages state from flow
+    LaunchedEffect(dailyCompletedPackagesCollect) {
+        dailyCompletedPackages = dailyCompletedPackagesCollect
+    }
     
     // Fetch user profile dari Firestore - HANYA SEKALI
     LaunchedEffect(Unit) {
@@ -260,46 +301,29 @@ fun HomeScreen(
     }
     
     // Progress data
-    var completedMissions by remember { mutableStateOf(3) }
-    var totalMissions by remember { mutableStateOf(5) }
-    val progress = completedMissions.toFloat() / totalMissions.toFloat()
+    val dailyProgress = dailyCompletedPackages.toFloat() / 4f // Total 4 kategori quiz
     
-    // Kategori Quiz
-    val quizCategories = remember {
-        listOf(
-            QuizCategory(
-                name = "Pakaian Adat",
-                icon = Icons.Default.Home,
-                color = Color(0xFFE57373),
-                completedQuestions = 15,
-                totalQuestions = 24,
-                categoryId = "Pakaian Adat"
-            ),
-            QuizCategory(
-                name = "Makanan Khas",
-                icon = Icons.Default.Fastfood,
-                color = Color(0xFF64B5F6),
-                completedQuestions = 18,
-                totalQuestions = 24,
-                categoryId = "Makanan Khas"
-            ),
-            QuizCategory(
-                name = "Geografi",
-                icon = Icons.Default.Map,
-                color = Color(0xFF81C784),
-                completedQuestions = 12,
-                totalQuestions = 24,
-                categoryId = "Geografi"
-            ),
-            QuizCategory(
-                name = "Kesenian",
-                icon = Icons.Default.LocalActivity,
-                color = Color(0xFFBA68C8),
-                completedQuestions = 10,
-                totalQuestions = 24,
-                categoryId = "Kesenian"
-            )
+    // Kategori Quiz - built from database packages
+    val quizCategories = remember(quizPackages) {
+        val categoryColorMap = mapOf(
+            "Pakaian Adat" to Color(0xFFE57373),
+            "Makanan Khas" to Color(0xFF64B5F6),
+            "Geografi" to Color(0xFF81C784),
+            "Kesenian" to Color(0xFFBA68C8)
         )
+        
+        quizPackages
+            .filter { it.name in listOf("Pakaian Adat", "Makanan Khas", "Geografi", "Kesenian") }
+            .map { pkg ->
+                QuizCategory(
+                    name = pkg.name,
+                    iconUrl = pkg.iconUrl,
+                    color = categoryColorMap[pkg.name] ?: Color(0xFF9E9E9E),
+                    completedQuestions = 10,
+                    totalQuestions = 10,
+                    categoryId = pkg.name
+                )
+            }
     }
 
     Column(
@@ -444,7 +468,7 @@ fun HomeScreen(
                         color = Color(0xFF2E2E2E)
                     )
                     Text(
-                        text = "$completedMissions/$totalMissions Misi",
+                        text = "$dailyCompletedPackages/4 Paket",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFF6B35) // Orange
@@ -463,7 +487,7 @@ fun HomeScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(progress)
+                            .fillMaxWidth(dailyProgress)
                             .height(12.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(
@@ -590,21 +614,23 @@ fun QuizCategoryCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Icon dengan background warna
+            // Icon dengan background warna - dari URL atau fallback
             Surface(
                 modifier = Modifier.size(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 color = category.color
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = category.icon,
+                if (category.iconUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = category.iconUrl,
                         contentDescription = category.name,
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(48.dp)
                     )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("📦", fontSize = 28.sp)
+                    }
                 }
             }
             

@@ -1,5 +1,7 @@
 package com.example.misi_budaya.data.repository
 
+import android.content.Context
+import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.data.model.Paket
 import com.example.misi_budaya.data.model.Pilihan
 import com.example.misi_budaya.data.model.Question
@@ -14,7 +16,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 
-class QuizRepository(private val quizPackageDao: QuizPackageDao, private val questionDao: QuestionDao) {
+class QuizRepository(private val quizPackageDao: QuizPackageDao, private val questionDao: QuestionDao, private val context: Context? = null, private val preferencesManager: UserPreferencesManager? = null) {
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -195,6 +197,9 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                 }
             }
         }
+        
+        // Increment daily package count
+        preferencesManager?.incrementDailyPackageCount()
         
         // Update Remote Score (Firestore)
         updateUserScoresInFirestore(quizName, newScore)

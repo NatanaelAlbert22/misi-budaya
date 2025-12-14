@@ -22,6 +22,8 @@ class UserPreferencesManager(private val context: Context) {
         private val HAS_SEEN_ONLINE_PROMPT = booleanPreferencesKey("has_seen_online_prompt")
         private val PREVIOUS_USER_UID = stringPreferencesKey("previous_user_uid")
         private val PREVIOUS_USER_EMAIL = stringPreferencesKey("previous_user_email")
+        private val DAILY_COMPLETED_PACKAGES = stringPreferencesKey("daily_completed_packages") // Store as "2024-12-15:2"
+        private val DAILY_PACKAGE_COUNT = stringPreferencesKey("daily_package_count") // Store count for current day
     }
 
     /**
@@ -54,6 +56,14 @@ class UserPreferencesManager(private val context: Context) {
     val previousUserEmailFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PREVIOUS_USER_EMAIL]
+        }
+
+    /**
+     * Flow untuk observe daily completed packages count
+     */
+    val dailyPackageCountFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[DAILY_PACKAGE_COUNT]?.toIntOrNull() ?: 0
         }
 
     /**
@@ -101,6 +111,34 @@ class UserPreferencesManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences.remove(PREVIOUS_USER_UID)
             preferences.remove(PREVIOUS_USER_EMAIL)
+        }
+    }
+
+    /**
+     * Increment daily completed packages count
+     */
+    suspend fun incrementDailyPackageCount() {
+        context.dataStore.edit { preferences ->
+            val currentCount = preferences[DAILY_PACKAGE_COUNT]?.toIntOrNull() ?: 0
+            preferences[DAILY_PACKAGE_COUNT] = (currentCount + 1).toString()
+        }
+    }
+
+    /**
+     * Reset daily package count (call this every new day)
+     */
+    suspend fun resetDailyPackageCount() {
+        context.dataStore.edit { preferences ->
+            preferences[DAILY_PACKAGE_COUNT] = "0"
+        }
+    }
+
+    /**
+     * Set daily package count to specific value
+     */
+    suspend fun setDailyPackageCount(count: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[DAILY_PACKAGE_COUNT] = count.toString()
         }
     }
 
