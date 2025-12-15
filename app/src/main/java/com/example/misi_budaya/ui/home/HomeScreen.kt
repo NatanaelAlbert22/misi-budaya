@@ -212,18 +212,31 @@ fun HomeScreen(
     // Load daily completed packages dan check apakah perlu reset
     val dailyCompletedPackagesCollect by preferencesManager.dailyPackageCountFlow.collectAsState(initial = 0)
     
-    // Load quiz packages dari database untuk mendapatkan icon URL
+    // Load quiz packages dari database - gunakan collectAsState untuk reactive updates
+    val quizPackagesFromDb by db.quizPackageDao().getAllQuizPackages().collectAsState(initial = emptyList())
+    quizPackages = quizPackagesFromDb
+    
+    // Trigger refresh dari Firebase saat HomeScreen pertama kali dibuka
+    // Ini memastikan data packages selalu up-to-date
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                db.quizPackageDao().getAllQuizPackages().collect { packages ->
-                    quizPackages = packages
-                }
+                val quizRepository = com.example.misi_budaya.data.repository.QuizRepository(
+                    db.quizPackageDao(),
+                    db.questionDao()
+                )
+                // Refresh data packages dari Firebase dan simpan ke local database
+                quizRepository.refreshPaketList()
+                android.util.Log.d("HomeScreen", "Refreshed quiz packages from Firebase")
             } catch (e: Exception) {
-                android.util.Log.e("HomeScreen", "Error loading quiz packages: ", e)
+                android.util.Log.w("HomeScreen", "Failed to refresh quiz packages: ${e.message}")
+                // Tetap lanjut dengan local data jika refresh gagal
             }
         }
-        
+    }
+    
+    // Check apakah perlu reset daily counter
+    LaunchedEffect(Unit) {
         val today = java.time.LocalDate.now().toString() // Format: YYYY-MM-DD
         val prefs = context.getSharedPreferences("daily_reset", Context.MODE_PRIVATE)
         val lastResetDate = prefs.getString("last_reset_date", "")
@@ -240,6 +253,35 @@ fun HomeScreen(
     // Update dailyCompletedPackages state from flow
     LaunchedEffect(dailyCompletedPackagesCollect) {
         dailyCompletedPackages = dailyCompletedPackagesCollect
+    }
+    
+    // Pre-load pertanyaan untuk semua kategori quiz saat HomeScreen dibuka
+    // Ini memastikan soal sudah ter-cache ketika user membuka quiz
+    LaunchedEffect(quizPackages) {
+        if (quizPackages.isNotEmpty()) {
+            scope.launch {
+                try {
+                    val quizRepository = com.example.misi_budaya.data.repository.QuizRepository(
+                        db.quizPackageDao(),
+                        db.questionDao()
+                    )
+                    
+                    // Pre-load pertanyaan untuk setiap kategori quiz
+                    val categoryNames = listOf("Pakaian Adat", "Makanan Khas", "Geografi", "Kesenian")
+                    for (categoryName in categoryNames) {
+                        try {
+                            // Load dari local database dulu, jika kosong load dari Firebase
+                            quizRepository.getSoalList(categoryName, forceRefresh = false)
+                            android.util.Log.d("HomeScreen", "Pre-loaded questions for $categoryName")
+                        } catch (e: Exception) {
+                            android.util.Log.w("HomeScreen", "Failed to pre-load questions for $categoryName", e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("HomeScreen", "Error in pre-loading questions", e)
+                }
+            }
+        }
     }
     
     // Fetch user profile dari Firestore - HANYA SEKALI
