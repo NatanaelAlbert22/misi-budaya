@@ -380,7 +380,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
                             user.username,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (rank <= 3) Color(0xFF2E2E2E) else MaterialTheme.colorScheme.onSurface
                         )
                     }
                     
@@ -389,7 +389,7 @@ private fun LeaderboardItem(rank: Int, user: UserProfile) {
                     Text(
                         "Level $level",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (rank <= 3) Color(0xFF616161) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
