@@ -110,4 +110,28 @@ class PaymentRepository {
         Log.e(TAG, "Error getting transaction", e)
         Result.failure(e)
     }
+    
+    /**
+     * Get latest transaction for user
+     * Digunakan untuk cek apakah pembayaran sudah success
+     */
+    suspend fun getLatestTransactionByUserId(userId: String): Result<Map<String, Any>?> = try {
+        val result = db.collection(TRANSACTIONS_COLLECTION)
+            .whereEqualTo("userId", userId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+        
+        val transaction = if (result.documents.isNotEmpty()) {
+            result.documents[0].data
+        } else {
+            null
+        }
+        
+        Result.success(transaction)
+    } catch (e: Exception) {
+        Log.e(TAG, "Error getting latest transaction", e)
+        Result.failure(e)
+    }
 }

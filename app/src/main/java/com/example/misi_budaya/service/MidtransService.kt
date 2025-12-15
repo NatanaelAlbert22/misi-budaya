@@ -210,6 +210,7 @@ class MidtransService(context: Context) {
     
     /**
      * Setup WebView untuk Midtrans Snap
+     * Mendeteksi payment completion melalui URL redirect dari Midtrans
      */
     fun setupWebViewForPayment(
         webView: WebView,
@@ -227,6 +228,31 @@ class MidtransService(context: Context) {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 Log.d(TAG, "Page loaded: $url")
+                
+                // Check if this is a Midtrans finish page or redirect after payment
+                if (url != null) {
+                    when {
+                        // Check for success redirect or finish page
+                        url.contains("status=success", ignoreCase = true) ||
+                        url.contains("status=completed", ignoreCase = true) ||
+                        url.contains("finish", ignoreCase = true) -> {
+                            Log.d(TAG, "Payment success detected from URL: $url")
+                            onPaymentSuccess("payment_success")
+                        }
+                        // Check for pending payment
+                        url.contains("status=pending", ignoreCase = true) -> {
+                            Log.d(TAG, "Payment pending: $url")
+                            // Still waiting for payment confirmation
+                        }
+                        // Check for failure
+                        url.contains("status=error", ignoreCase = true) ||
+                        url.contains("status=failure", ignoreCase = true) ||
+                        url.contains("error", ignoreCase = true) -> {
+                            Log.e(TAG, "Payment error detected: $url")
+                            onPaymentError("Payment failed or was cancelled")
+                        }
+                    }
+                }
             }
             
             override fun onReceivedError(
@@ -236,8 +262,11 @@ class MidtransService(context: Context) {
                 failingUrl: String?
             ) {
                 super.onReceivedError(view, errorCode, description, failingUrl)
-                Log.e(TAG, "WebView Error: $description")
-                onPaymentError(description ?: "Unknown error")
+                Log.e(TAG, "WebView Error Code: $errorCode, Description: $description")
+                // Don't immediately call onError for all cases, only for critical errors
+                if (errorCode != WebViewClient.ERROR_HOST_LOOKUP) {
+                    onPaymentError(description ?: "Unknown error")
+                }
             }
         }
         

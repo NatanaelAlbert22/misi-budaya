@@ -69,6 +69,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.misi_budaya.config.PricingConfig
 import com.example.misi_budaya.data.local.AppDatabase
 import com.example.misi_budaya.data.local.UserPreferencesManager
 import com.example.misi_budaya.util.NetworkMonitor
@@ -102,42 +103,47 @@ fun ProfileScreen(rootNavController: NavController) {
     var isLoadingProfile by rememberSaveable { mutableStateOf(true) }
     var isPremium by rememberSaveable { mutableStateOf(false) }
     var isGoogleUser by rememberSaveable { mutableStateOf(false) }
-    var hasLoadedProfile by rememberSaveable { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0) }
     
-    // Load user profile - HANYA SEKALI
-    LaunchedEffect(Unit) {
-        if (hasLoadedProfile) return@LaunchedEffect // Skip jika sudah pernah load
-        
+    // Function untuk refresh user profile
+    fun refreshUserProfile() {
         if (currentUser != null) {
-            userEmail = currentUser.email ?: ""
-            
-            // Cek apakah user login dengan Google
-            val providerData = currentUser.providerData
-            isGoogleUser = providerData.any { it.providerId == "google.com" }
-            
-            if (!isOfflineMode) {
-                userRepository.getUserProfile(currentUser.uid).fold(
-                    onSuccess = { profile ->
-                        currentUsername = profile.username
-                        isPremium = profile.isPremium
-                        isLoadingProfile = false
-                        hasLoadedProfile = true
-                    },
-                    onFailure = {
-                        currentUsername = userEmail.split("@").firstOrNull() ?: ""
-                        isLoadingProfile = false
-                        hasLoadedProfile = true
-                    }
-                )
-            } else {
-                currentUsername = userEmail.split("@").firstOrNull() ?: ""
-                isLoadingProfile = false
-                hasLoadedProfile = true
+            scope.launch {
+                isLoadingProfile = true
+                userEmail = currentUser.email ?: ""
+                
+                val providerData = currentUser.providerData
+                isGoogleUser = providerData.any { it.providerId == "google.com" }
+                
+                if (!isOfflineMode) {
+                    userRepository.getUserProfile(currentUser.uid).fold(
+                        onSuccess = { profile ->
+                            currentUsername = profile.username
+                            isPremium = profile.isPremium
+                            isLoadingProfile = false
+                        },
+                        onFailure = {
+                            currentUsername = userEmail.split("@").firstOrNull() ?: ""
+                            isLoadingProfile = false
+                        }
+                    )
+                } else {
+                    currentUsername = userEmail.split("@").firstOrNull() ?: ""
+                    isLoadingProfile = false
+                }
             }
-        } else {
-            isLoadingProfile = false
-            hasLoadedProfile = true
         }
+    }
+    
+    // Load user profile saat screen muncul pertama kali dan saat refresh
+    LaunchedEffect(refreshTrigger) {
+        refreshUserProfile()
+    }
+    
+    // Re-fetch user data untuk detect premium upgrade setelah payment
+    LaunchedEffect(Unit) {
+        // Initial load
+        refreshUserProfile()
     }
 
     Column(
@@ -794,9 +800,22 @@ fun ProfileScreen(rootNavController: NavController) {
     if (navigateToPayment && currentUser != null) {
         LaunchedEffect(Unit) {
             rootNavController.navigate(
-                "payment/${currentUser.uid}/${currentUsername}/${userEmail}/4999900/Upgrade Premium"
+                "payment/${currentUser.uid}/${currentUsername}/${userEmail}/${PricingConfig.PREMIUM_PRICE_CENTS}/${PricingConfig.PREMIUM_DESCRIPTION}"
             )
             navigateToPayment = false
+            
+            // Refresh user profile setelah kembali dari payment
+            refreshTrigger++
+        }
+    }
+    
+    // Monitor navigation changes untuk refresh data setelah payment
+    LaunchedEffect(rootNavController.currentBackStackEntryFlow) {
+        rootNavController.currentBackStackEntryFlow.collect { backStackEntry ->
+            if (backStackEntry.destination.route == "profile") {
+                // Refresh setiap kali kembali ke profile screen
+                refreshTrigger++
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.misi_budaya.ui.payment
 
+import android.util.Log
 import android.widget.Toast
 import android.webkit.WebView
 import androidx.compose.foundation.background
@@ -47,14 +48,18 @@ fun PaymentScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var showWebView by remember { mutableStateOf(false) }
     var transactionId by remember { mutableStateOf<String?>(null) }
+    
+    // Amount sudah dalam RUPIAH (49999), gunakan langsung
+    val displayAmount = amount
 
     LaunchedEffect(Unit) {
         // Generate token saat screen pertama kali dibuka
         isLoading = true
+        Log.d("PaymentScreen", "Amount (Rp): $displayAmount")
         scope.launch {
             val transactionRequest = TransactionRequest(
                 userId = userId,
-                amount = amount,
+                amount = amount,  // Gunakan langsung dalam Rupiah
                 description = description,
                 email = userEmail,
                 firstName = userName
@@ -72,7 +77,7 @@ fun PaymentScreen(
                     paymentRepository.recordTransaction(
                         userId = userId,
                         orderId = response.orderId,
-                        amount = amount,
+                        amount = amount,  // Simpan dalam Rupiah
                         description = description,
                         status = "pending"
                     ).onSuccess { txnId ->
@@ -122,24 +127,78 @@ fun PaymentScreen(
                 }
             } else if (showWebView && snapUrl != null) {
                 // WebView dengan Midtrans Snap
-                AndroidView(
-                    factory = { context ->
-                        WebView(context).apply {
-                            midtransService.setupWebViewForPayment(
-                                this,
-                                snapUrl!!,
-                                onPaymentSuccess = { token ->
-                                    onSuccess(token)
-                                },
-                                onPaymentError = { errorMsg ->
-                                    error = errorMsg
-                                    onError(errorMsg)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                        factory = { context ->
+                            WebView(context).apply {
+                                midtransService.setupWebViewForPayment(
+                                    this,
+                                    snapUrl!!,
+                                    onPaymentSuccess = { token ->
+                                        // Upgrade user ke premium setelah pembayaran berhasil
+                                        scope.launch {
+                                            paymentRepository.upgradeToPremiumAfterPayment(userId)
+                                                .onSuccess {
+                                                    // Update transaction status ke success
+                                                    transactionId?.let {
+                                                        paymentRepository.updateTransactionStatus(it, "success")
+                                                    }
+                                                    onSuccess(token)
+                                                }
+                                                .onFailure { exception ->
+                                                    error = exception.message ?: "Failed to upgrade to premium"
+                                                    onError(error ?: "Unknown error")
+                                                }
+                                        }
+                                    },
+                                    onPaymentError = { errorMsg ->
+                                        error = errorMsg
+                                        onError(errorMsg)
+                                    }
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    
+                    // Close button untuk WebView
+                    IconButton(
+                        onClick = {
+                            // Setelah user close WebView, check transaction status
+                            scope.launch {
+                                transactionId?.let { txnId ->
+                                    paymentRepository.getLatestTransactionByUserId(userId)
+                                        .onSuccess { transaction ->
+                                            if (transaction != null) {
+                                                val status = transaction["status"] as? String ?: ""
+                                                if (status == "success") {
+                                                    // Payment sudah success, upgrade ke premium
+                                                    paymentRepository.upgradeToPremiumAfterPayment(userId)
+                                                        .onSuccess {
+                                                            onSuccess("payment_verified")
+                                                        }
+                                                        .onFailure {
+                                                            showWebView = false
+                                                        }
+                                                } else {
+                                                    // Payment belum success, tutup webview tapi tunggu
+                                                    showWebView = false
+                                                }
+                                            } else {
+                                                showWebView = false
+                                            }
+                                        }
                                 }
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                    ) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+
             } else if (error != null) {
                 // Error state
                 Column(
@@ -236,7 +295,7 @@ fun PaymentScreen(
                             ) {
                                 Text("Total Pembayaran:", fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = "Rp ${String.format("%,d", amount / 100)}",
+                                    text = "Rp ${String.format("%,d", displayAmount)}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
                                     color = Color(0xFF059669)
