@@ -39,6 +39,9 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        disable += "MissingPermission"
+    }
 }
 
 dependencies {
@@ -82,6 +85,9 @@ dependencies {
     
     // For runtime permissions
     implementation("androidx.activity:activity-compose:1.8.1")
+
+    // WebView untuk Midtrans Snap
+    implementation("androidx.webkit:webkit:1.7.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

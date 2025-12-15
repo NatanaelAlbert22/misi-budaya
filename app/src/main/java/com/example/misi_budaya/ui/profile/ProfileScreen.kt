@@ -94,6 +94,7 @@ fun ProfileScreen(rootNavController: NavController) {
     var showEditUsernameDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showPremiumModal by remember { mutableStateOf(false) }
+    var navigateToPayment by remember { mutableStateOf(false) }
     
     // User profile state dengan rememberSaveable
     var currentUsername by rememberSaveable { mutableStateOf("") }
@@ -783,36 +784,20 @@ fun ProfileScreen(rootNavController: NavController) {
         PremiumUpgradeDialog(
             onDismiss = { showPremiumModal = false },
             onPurchase = {
-                scope.launch {
-                    if (currentUser != null) {
-                        userRepository.upgradeToPremium(currentUser.uid).fold(
-                            onSuccess = {
-                                isPremium = true
-                                showPremiumModal = false
-                                Toast.makeText(
-                                    context,
-                                    "🎉 Selamat! Anda sekarang premium!",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            },
-                            onFailure = { error ->
-                                Toast.makeText(
-                                    context,
-                                    "Gagal upgrade: ${error.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        )
-                    } else {
-                        Toast.makeText(
-                            context,
-                            "Silakan login terlebih dahulu",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
+                navigateToPayment = true
+                showPremiumModal = false
             }
         )
+    }
+    
+    // Navigate to Payment Screen
+    if (navigateToPayment && currentUser != null) {
+        LaunchedEffect(Unit) {
+            rootNavController.navigate(
+                "payment/${currentUser.uid}/${currentUsername}/${userEmail}/4999900/Upgrade Premium"
+            )
+            navigateToPayment = false
+        }
     }
 }
 

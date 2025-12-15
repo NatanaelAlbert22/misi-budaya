@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.misi_budaya.ui.login.LoginScreen
 import com.example.misi_budaya.ui.main.MainScreen
+import com.example.misi_budaya.ui.payment.PaymentScreen
 import com.example.misi_budaya.ui.signup.SignUpScreen
 import com.example.misi_budaya.ui.splash.SplashScreen
 import com.example.misi_budaya.ui.theme.MisibudayaTheme
@@ -86,6 +87,31 @@ fun MyApp(
                 rootNavController = navController,
                 isDarkTheme = isDarkTheme,
                 onThemeChange = onThemeChange
+            )
+        }
+        composable("payment/{userId}/{userName}/{userEmail}/{amount}/{description}") { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val userName = backStackEntry.arguments?.getString("userName") ?: ""
+            val userEmail = backStackEntry.arguments?.getString("userEmail") ?: ""
+            val amount = backStackEntry.arguments?.getString("amount")?.toLongOrNull() ?: 0L
+            val description = backStackEntry.arguments?.getString("description") ?: ""
+            
+            PaymentScreen(
+                userId = userId,
+                userName = userName,
+                userEmail = userEmail,
+                amount = amount,
+                description = description,
+                onSuccess = { token ->
+                    // Handle successful payment
+                    navController.navigateUp()
+                },
+                onError = { errorMsg ->
+                    // Handle error - stay on payment screen
+                },
+                onBack = {
+                    navController.navigateUp()
+                }
             )
         }
     }
