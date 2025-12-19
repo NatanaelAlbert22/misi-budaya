@@ -356,6 +356,8 @@ fun HomeScreen(
         
         quizPackages
             .filter { it.name in listOf("Pakaian Adat", "Makanan Khas", "Geografi", "Kesenian") }
+            // PENTING: Filter hidden secret quiz yang belum di-unlock
+            .filter { pkg -> !(pkg.isSecret && !pkg.isUnlocked) }
             .map { pkg ->
                 QuizCategory(
                     name = pkg.name,

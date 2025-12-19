@@ -22,7 +22,7 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
     private val auth = FirebaseAuth.getInstance()
     private val paketCollection = db.collection("Paket")
     private val soalCollection = db.collection("Soal")
-    private val usersCollection = db.collection("Users")
+    private val usersCollection = db.collection("users")
 
     // --- Leaderboard --- 
     suspend fun getLeaderboardData(): List<UserProfile> {
@@ -80,38 +80,62 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
                     isPremium = userDoc.getBoolean("isPremium") ?: false
                     android.util.Log.d("QuizRepository", "User isPremium: $isPremium")
                     
-                    @Suppress("UNCHECKED_CAST")
-                    val unlockedMap = userDoc.get("unlockedQuizzes") as? Map<String, Any>
-                    if (unlockedMap != null) {
-                        unlockedMap.forEach { (quizName, isUnlocked) ->
-                            if (isUnlocked == true) {
-                                unlockedQuizzes.add(quizName)
-                                android.util.Log.d("QuizRepository", "Found unlocked quiz: $quizName")
+                    // Fetch unlockedQuizzes dengan approach yang lebih aman
+                    try {
+                        @Suppress("UNCHECKED_CAST")
+                        val unlockedMapRaw = userDoc.get("unlockedQuizzes")
+                        android.util.Log.d("QuizRepository", "unlockedQuizzes raw: $unlockedMapRaw (type: ${unlockedMapRaw?.javaClass?.simpleName})")
+                        
+                        if (unlockedMapRaw is Map<*, *>) {
+                            unlockedMapRaw.forEach { (quizName, isUnlocked) ->
+                                // Convert key to String
+                                val quizNameStr = quizName?.toString() ?: ""
+                                // Convert value to Boolean - lebih flexible untuk handle berbagai tipe
+                                val isUnlockedBool = when (isUnlocked) {
+                                    is Boolean -> isUnlocked
+                                    is Long -> isUnlocked > 0  // Firestore bisa return sebagai Long untuk true/false
+                                    else -> isUnlocked == true
+                                }
+                                
+                                if (isUnlockedBool && quizNameStr.isNotEmpty()) {
+                                    unlockedQuizzes.add(quizNameStr)
+                                    android.util.Log.d("QuizRepository", "✓ ADDED to unlockedQuizzes: $quizNameStr")
+                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        android.util.Log.w("QuizRepository", "Error parsing unlockedQuizzes map: ${e.message}", e)
                     }
+                    
+                    android.util.Log.d("QuizRepository", "Final unlockedQuizzes: $unlockedQuizzes")
                 } catch (e: Exception) {
-                    android.util.Log.w("QuizRepository", "Error fetching user data: ${e.message}")
+                    android.util.Log.w("QuizRepository", "Error fetching user data: ${e.message}", e)
                 }
             }
+
 
             val packagesToUpsert = mutableListOf<QuizPackage>()
 
             for (paket in firebasePaketList) {
-                // PENTING: Jika paket adalah secret dan user tidak premium, skip paket ini
-                if (paket.isSecret && !isPremium) {
-                    android.util.Log.d("QuizRepository", "Skipping secret package: ${paket.namaPaket} because user is not premium")
-                    continue
-                }
-
                 val existingPackage = quizPackageDao.getQuizPackageByName(paket.namaPaket)
                 
-                // Check if this secret quiz is unlocked
-                // Jika user premium, semua secret quiz dianggap unlocked
-                val isUnlocked = if (isPremium && paket.isSecret) {
-                    true
-                } else {
-                    unlockedQuizzes.contains(paket.namaPaket)
+                // Tentukan isUnlocked status:
+                // 1. Jika user premium dan secret quiz, unlock semua
+                // 2. Jika ada di unlockedQuizzes, unlock
+                // 3. Selainnya, lock
+                val isUnlocked = when {
+                    isPremium && paket.isSecret -> {
+                        // Premium user: semua secret quiz unlocked
+                        true
+                    }
+                    unlockedQuizzes.contains(paket.namaPaket) -> {
+                        // Quiz sudah di-unlock sebelumnya
+                        true
+                    }
+                    else -> {
+                        // Default: lock
+                        false
+                    }
                 }
 
                 val mergedPackage = QuizPackage(
@@ -139,6 +163,13 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
 
     // --- Questions ---
     suspend fun getSoalList(paketId: String, forceRefresh: Boolean = false): List<Question> {
+        // PENTING: Validasi apakah user bisa akses quiz ini
+        val paketPackage = quizPackageDao.getQuizPackageByName(paketId)
+        if (paketPackage != null && paketPackage.isSecret && !paketPackage.isUnlocked) {
+            android.util.Log.w("QuizRepository", "Access denied: Secret quiz '$paketId' is not unlocked")
+            return emptyList()
+        }
+        
         var localQuestions = questionDao.getQuestionsForQuiz(paketId)
         if (localQuestions.isNotEmpty() && !forceRefresh) {
             return localQuestions
@@ -383,6 +414,12 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             val allPackages = quizPackageDao.getAllQuizPackagesOnce()
 
             for (paket in allPackages) {
+                // PENTING: Skip secret quiz yang belum di-unlock
+                if (paket.isSecret && !paket.isUnlocked) {
+                    android.util.Log.d("QuizRepository", "Skipping download for locked secret quiz: ${paket.name}")
+                    continue
+                }
+                
                 try {
                     // Get questions from Firebase for this package
                     val firebaseSoalList = soalCollection.whereEqualTo("paketId", paket.name).get().await()

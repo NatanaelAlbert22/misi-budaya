@@ -314,8 +314,23 @@ fun QuizScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
+                    // DEBUG: Log semua packages
+                    android.util.Log.d("QuizScreen", "Total quizPacks: ${quizPacks.size}")
+                    quizPacks.forEach { pkg ->
+                        android.util.Log.d("QuizScreen", "  - ${pkg.name}: isSecret=${pkg.isSecret}, isUnlocked=${pkg.isUnlocked}")
+                    }
+                    
+                    // Filter: Jangan tampilkan secret quiz yang belum di-unlock
                     // Sort: secret quizzes first, then regular ones
-                    val sortedPacks = quizPacks.sortedByDescending { it.isSecret }
+                    val sortedPacks = quizPacks
+                        .filter { pkg -> !pkg.isSecret || pkg.isUnlocked }  // Hanya tampilkan secret quiz yang sudah unlock
+                        .sortedByDescending { it.isSecret }
+                    
+                    android.util.Log.d("QuizScreen", "After filter: ${sortedPacks.size}")
+                    sortedPacks.forEach { pkg ->
+                        android.util.Log.d("QuizScreen", "  Displayed - ${pkg.name}")
+                    }
+                    
                     items(sortedPacks) { pack ->
                         Card(
                             modifier = Modifier
