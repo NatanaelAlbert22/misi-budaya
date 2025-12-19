@@ -98,6 +98,12 @@ class QuizRepository(private val quizPackageDao: QuizPackageDao, private val que
             val packagesToUpsert = mutableListOf<QuizPackage>()
 
             for (paket in firebasePaketList) {
+                // PENTING: Jika paket adalah secret dan user tidak premium, skip paket ini
+                if (paket.isSecret && !isPremium) {
+                    android.util.Log.d("QuizRepository", "Skipping secret package: ${paket.namaPaket} because user is not premium")
+                    continue
+                }
+
                 val existingPackage = quizPackageDao.getQuizPackageByName(paket.namaPaket)
                 
                 // Check if this secret quiz is unlocked
